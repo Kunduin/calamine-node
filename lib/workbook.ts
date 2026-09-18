@@ -7,12 +7,13 @@ import type {
   VbaProject,
 } from '../native/binding.cjs';
 import { SpreadsheetError, integer } from './errors.js';
+import { collectionBatchSize, readOptions } from './options.js';
 import type { Gate } from './gate.js';
 import type { Workbook, SheetResult, RowBatch, ReadOptions, Row, VbaOptions } from './types.js';
 
 function metadata(info: RangeInfo, sheet: Readonly<SheetInfo>): Omit<SheetResult, 'rows'> {
   return {
-    sheet,
+    ...sheet,
     origin: info.row == null || info.column == null ? null : { row: info.row, column: info.column },
     rowCount: info.rowCount,
     columnCount: info.columnCount,
@@ -64,7 +65,7 @@ export class WorkbookHandle implements Workbook {
         : this.sheets[integer(selector, 'sheet index', 0)];
     if (!sheet) throw new SpreadsheetError('ERR_SHEET', 'Unknown sheet');
     const batchSize = integer(options.batchSize ?? 256, 'batchSize', 1, 10_000);
-    const maxCells = integer(options.maxCells ?? this.maxCells, 'maxCells');
+    const maxCells = integer(options.maxCells ?? this.maxCells, 'maxCells', 0);
     const content = options.content ?? 'values';
     if (content !== 'values' && content !== 'formulas')
       throw new TypeError('content must be values or formulas');
@@ -112,9 +113,13 @@ export class WorkbookHandle implements Workbook {
   async readSheet(selector: string | number = 0, options: ReadOptions = {}): Promise<SheetResult> {
     const rows: Row[] = [];
     let result: SheetResult | undefined;
-    for await (const batch of this.readBatches(selector, options)) {
+    const reading = readOptions(options, this.maxCells, collectionBatchSize);
+    for await (const batch of this.readBatches(selector, reading)) {
       result ??= {
-        sheet: batch.sheet,
+        name: batch.name,
+        index: batch.index,
+        kind: batch.kind,
+        visibility: batch.visibility,
         origin: batch.origin,
         rowCount: batch.rowCount,
         columnCount: batch.columnCount,

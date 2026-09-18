@@ -6,6 +6,8 @@
 - `src/cell.rs`: explicit cell-value conversion, including dates/errors/large integers.
 - `src/workbook.rs`, `src/sheet.rs`, `src/vba.rs`: owned handles and napi-rs AsyncTasks.
 - `lib/reader.ts`: validated input entry points and admission configuration.
+- `lib/read.ts`: complete sheet/workbook collection with automatic cleanup and aggregate limits.
+- `lib/options.ts`: shared option validation and collection defaults.
 - `lib/workbook.ts`: public lifetime and iteration behavior.
 - `lib/gate.ts`, `lib/stream.ts`: bounded work admission and temporary input spooling.
 - `native/`: generated napi-rs loader/declarations and local compiled binaries.
@@ -37,7 +39,9 @@ Both language sources are formatted; Rust attributes stay attached to declaratio
 The package uses Node-API 8. Stable TypeScript 7 builds ESM JS and declarations;
 CommonJS import behavior is not part of the initial public compatibility contract.
 Rust's `dyn-symbols` feature allows pure Rust unit tests to link without a Node host;
-the real Node-API boundary is validated by Node and Bun integration tests.
+the real Node-API boundary is validated by Node and Bun integration tests. Complete
+reads and handle reads use the same sheet result shape: metadata is directly
+available as `result.name`, `result.index`, `result.kind` and `result.visibility`.
 
 ## Platform builds
 
@@ -80,6 +84,10 @@ an installed dependency of this package.
 
 ```sh
 node scripts/generate-benchmarks.cjs /path/to/xlsx.js /tmp
+node --expose-gc scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx complete-workbook
+node --expose-gc scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx complete-sheet
+node --expose-gc scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx read-sheet-256
+node --expose-gc scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx read-sheet-512
 node --expose-gc scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx read-sheet
 node --expose-gc scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx parse-only
 node --expose-gc scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx single-native-batch

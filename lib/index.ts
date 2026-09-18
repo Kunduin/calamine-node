@@ -6,6 +6,8 @@ export { SpreadsheetError } from './errors.js';
 export type * from './types.js';
 
 const defaultReader = createReader();
+export const readWorkbook: Reader['readWorkbook'] = defaultReader.readWorkbook;
+export const readSheet: Reader['readSheet'] = defaultReader.readSheet;
 export const openFile: Reader['openFile'] = defaultReader.openFile;
 export const openBuffer: Reader['openBuffer'] = defaultReader.openBuffer;
 export const openStream: Reader['openStream'] = defaultReader.openStream;

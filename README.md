@@ -5,7 +5,8 @@ Asynchronous spreadsheet reading for Node.js and Bun, powered by
 
 Read local files, buffers, Node streams, Web streams, or asynchronous byte
 iterables. Parsing runs on native workers. Receive a complete worksheet or pull
-rows in batches, with a small TypeScript API and explicit resource ownership.
+rows in batches. Ordinary calls return complete JavaScript data and clean up
+automatically; workbook handles are available for advanced use.
 
 **Status:** initial development release; not yet published to npm. Linux x64 GNU
 has been tested locally on Node 22 and Bun 1.4. The CI configuration targets
@@ -47,7 +48,86 @@ The official napi-rs CLI builds the addon and generates its loader and declarati
 Consumers of a future release with a matching prebuilt binary will not need Rust.
 See [development and packaging](docs/development.md) for platform and release details.
 
-## Read a file
+## Read complete JavaScript data
+
+A **workbook** is an Excel file. A **sheet** is one tab inside that workbook.
+Choose the entry point that matches the data you need:
+
+```ts
+import { readWorkbook, readSheet } from 'calamine-node';
+
+const workbook = await readWorkbook('/data/report.xlsx');
+console.log(workbook.format, workbook.definedNames);
+for (const sheet of workbook.sheets) {
+  console.log(sheet.name, sheet.origin, sheet.rows);
+}
+
+const sheet = await readSheet('/data/report.xlsx', { sheet: 'Sales' });
+console.log(sheet.name, sheet.rows);
+```
+
+Both return ordinary JavaScript objects and arrays, without native handles or a
+`close()` obligation. Resources are closed before the Promise resolves or rejects.
+They accept a local path, file URL, `Uint8Array`/`Buffer`, Node/Web byte stream, or
+asynchronous byte iterable. Strings are file paths; remote downloads are supplied
+by the caller as bytes or a stream.
+
+The result of `readSheet` has this shape, which is also used by each entry of
+`readWorkbook(...).sheets` and the advanced workbook handle's `readSheet` method:
+
+```ts
+{
+  name: 'Sales',
+  index: 0,
+  kind: 'worksheet',
+  visibility: 'visible',
+  origin: { row: 0, column: 0 },
+  rowCount: 2,
+  columnCount: 2,
+  rows: [['item', 'amount'], ['apples', 42]],
+}
+```
+
+`rows` is a matrix of cells. The reader does not assume that the first row contains
+unique column names or silently convert rows into records keyed by headers.
+
+`readWorkbook` defaults to all **worksheets** in workbook order; it skips chart/VBA
+sheet types when selecting all. Select names or zero-based indices explicitly when
+needed. Results follow the requested order, with duplicate names/indices resolved
+to one result. `sheets: []` reads workbook metadata only, optionally including VBA.
+`readSheet` defaults to index 0.
+
+```ts
+const workbook = await readWorkbook(input, {
+  sheets: ['Sales', 'Forecast'], // Omit for all worksheets.
+  content: 'values', // Or 'formulas'; formulas are never evaluated.
+  maxCells: 2_000_000, // Aggregate budget across selected sheet rectangles.
+  maxInputBytes: 64 * 1024 * 1024,
+  includeVba: false,
+  maxVbaBytes: 16 * 1024 * 1024,
+  signal: controller.signal,
+});
+```
+
+`maxCells` counts cells including empty holes. For `readWorkbook` it applies across
+all selected sheets; for `readSheet` it applies to that sheet. Zero accepts empty
+ranges only. Limits are checked before JS materialization but after Calamine's
+native range allocation. `includeVba: true` adds `vbaProject` to the result, containing
+the extracted project or `null` if absent; otherwise the property is omitted.
+
+Complete reads automatically size internal conversion batches by sheet width, up
+to 16,384 cells and 512 rows per batch (a single wider row can exceed the cell
+target). An optional `batchSize` overrides the row ceiling while keeping the cell
+cap. Most callers should leave it unset. This reduces native calls for narrow sheets
+without delivering an entire huge object graph in one JS-thread callback. The final
+result still occupies memory proportional to all returned cells; large JSON
+serialization is a separate, synchronous JS operation.
+
+Use `createReader(configuration).readWorkbook(...)` or `.readSheet(...)` to share
+custom concurrency limits, a temporary directory, or experimental format opt-ins.
+Per-call input and cell limits override that reader's defaults.
+
+## Keep a workbook open for inspection or repeated reads
 
 ```ts
 import { openFile } from 'calamine-node';
@@ -55,29 +135,26 @@ import { openFile } from 'calamine-node';
 const workbook = await openFile('/data/report.xlsx');
 try {
   console.log(workbook.format, workbook.sheets, workbook.definedNames);
-
-  const sheet = await workbook.readSheet('Sheet1');
-  console.log(sheet.origin, sheet.rows);
+  console.log((await workbook.readSheet('Sheet1')).rows);
 } finally {
   await workbook.close();
 }
 ```
 
-A selector is a sheet name or a zero-based index; omitted means index 0. `sheets`
-contains `{ name, index, kind, visibility }` entries in workbook order. Metadata is
-frozen. Sheet kinds are `worksheet`, `dialog`, `macro`, `chart`, or `vba`; visibility
-is `visible`, `hidden`, or `very-hidden`. Some non-worksheet types cannot be read as
-cell ranges. Defined names contain `{ name, formula }`, without evaluating formulas.
+A handle's `sheets` contains metadata entries in workbook order. Sheet kinds are
+`worksheet`, `dialog`, `macro`, `chart`, or `vba`; visibility is `visible`, `hidden`,
+or `very-hidden`. Some non-worksheet types cannot be read as cell ranges. Metadata
+is frozen. Defined names contain `{ name, formula }`, without evaluating formulas.
 
 Calamine uses known filename extensions for local files and attempts readers when
-the extension is unknown. A misleading known extension can fail: use `openBuffer`
+the extension is unknown. A misleading known extension can fail: supply a Buffer
 for content-based detection in that case. Treat an opened file as immutable until
 closed; input limits inspect its size at open time.
 
 Where explicit resource management syntax is supported (including the project's
 TypeScript build), `await using workbook = await openFile(path)` closes automatically.
-A discarded Promise or garbage collection is not a substitute for `close()`:
-spooled temporary files need explicit cleanup.
+A discarded Promise or garbage collection is not a substitute for `close()` on a
+handle. Prefer the complete-read entry points when you do not need to manage a handle.
 
 ## Buffers and input streams
 
@@ -140,7 +217,7 @@ try {
 
 Each batch contains:
 
-- `sheet`: sheet metadata.
+- `name`, `index`, `kind`, `visibility`: sheet metadata, directly on the result.
 - `origin`: zero-based `{ row, column }` for the used rectangle, or `null` if empty.
 - `rowCount`, `columnCount`: dimensions of the complete used rectangle.
 - `offset`: first row's zero-based offset relative to the rectangle's origin.
@@ -154,7 +231,8 @@ and columns are represented by `origin`; they are not materialized as extra rows
 Batching limits JS value construction and honors consumer backpressure. It does
 **not** make native worksheet memory constant: Calamine constructs a worksheet range
 first. XLS/ODS can load all sheets while opening; XLSX/XLSB support lazy sheet loading.
-The default batch size is 256 rows, additionally reduced to roughly 16,384 cells.
+Explicit `readBatches` iteration defaults to 256 rows, additionally reduced to roughly
+16,384 cells. Complete reads use the automatic batching described above.
 An exceptionally wide single row can exceed that target; strings are not byte-limited.
 Breaking a `for await` loop closes the decoded sheet. When manually advancing an
 iterator, call its `return()` or close the workbook if you stop early.
@@ -229,15 +307,17 @@ try {
 }
 ```
 
-The example lists defaults. Top-level functions share one default reader; factories
-create independent queues. Reuse readers so their concurrency limit has meaning.
+The example lists defaults. Top-level complete-read and open functions share one
+default reader; factories create independent queues. Reuse readers so their
+concurrency limit has meaning.
 `maxQueued: 0` allows no waiting public operations; overflow rejects with
 `ERR_QUEUE_FULL`. Cleanup remains admissible so saturation cannot prevent disposal.
 Downloads occupy admission slots as well. Limits apply per reader, not process-wide.
 
 `maxCells` counts the whole dense used rectangle, including empty holes, and can be
-overridden for a read. It limits returned results **after native allocation**, not
-ZIP expansion or peak RSS. `maxInputBytes` limits compressed input; queued Buffer
+overridden for a read. Complete workbook reads share this budget across selected
+sheets. It limits returned results **after native allocation**, not ZIP expansion
+or peak RSS. `maxInputBytes` limits input bytes before decompression; queued Buffer
 calls retain snapshots and memory usage scales with queue size. Calamine's allocations,
 shared strings, returned values and multiple open workbooks are additional memory.
 For hostile documents or hard memory/time budgets, use an isolated process with OS
@@ -279,4 +359,5 @@ See [AGENT.md](AGENT.md) for code-quality conventions and
 [docs/development.md](docs/development.md) for tests, architecture and packaging.
 All fixtures are synthetic or attributed upstream samples. Benchmarks run locally.
 
-MIT licensed; see [LICENSE](LICENSE) and [NOTICE](NOTICE).
+MIT licensed; see [LICENSE](LICENSE). Third-party dependency license texts are
+included in [THIRD_PARTY_LICENSES.txt](THIRD_PARTY_LICENSES.txt).

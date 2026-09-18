@@ -3,9 +3,13 @@
 ## Purpose and scope
 
 Build a small, reliable, read-only Calamine package for Node.js and Bun. Keep the
-public TypeScript API focused on workbook capabilities. Keep cloud SDKs, HTTP
-clients, Aliyun OSS credentials, business ingestion logic, and database writes
-outside the package. A storage SDK supplies a byte stream to `openStream`.
+public TypeScript API focused on workbook capabilities. Ordinary callers use
+`readWorkbook` or `readSheet` to get complete JS data with automatic resource cleanup;
+advanced callers use handles or batch iteration. All paths share the same flat sheet
+result shape and cell semantics. A workbook-wide cell budget is aggregate, not per
+sheet. Keep cloud SDKs, HTTP clients, Aliyun OSS credentials, business ingestion
+logic, and database writes outside the package. A storage SDK supplies a byte stream
+to the reader.
 
 ## Toolchain
 
@@ -47,6 +51,8 @@ outside the package. A storage SDK supplies a byte stream to `openStream`.
   do not clone the entire workbook for every attempted format.
 - Define `#[napi] impl Task` before exported methods that reference the task in the
   same module, so generated Promise types are resolved. Do not hand-edit bindings.
+- Keep the project license in `LICENSE` (MIT); avoid a duplicate `NOTICE` entry point.
+  Preserve bundled third-party license texts separately.
 - Parsing and large explicit cleanup run in native workers. JS value construction
   still runs on the JS thread: bound each output batch and measure conversion costs.
 - Input streaming means backpressured spooling to a seekable temporary file.

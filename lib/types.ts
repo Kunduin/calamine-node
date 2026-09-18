@@ -7,14 +7,15 @@ export type { ByteStream } from './stream.js';
 /** Numeric dates retain Excel serials and calendar components; no timezone is invented. */
 export type Cell = string | number | boolean | null | SpecialValue;
 export type Row = Cell[];
+export type SheetSelector = string | number;
+export type WorkbookInput = string | URL | Uint8Array | ByteStream;
 
 export interface Origin {
   readonly row: number;
   readonly column: number;
 }
 
-export interface SheetResult {
-  readonly sheet: Readonly<SheetInfo>;
+export interface SheetResult extends Readonly<SheetInfo> {
   readonly origin: Origin | null;
   readonly rowCount: number;
   readonly columnCount: number;
@@ -28,14 +29,42 @@ export interface RowBatch extends SheetResult {
 
 export interface OpenOptions {
   readonly signal?: AbortSignal;
+  /** Overrides the reader's compressed input limit for this operation. */
+  readonly maxInputBytes?: number;
 }
 
-export interface ReadOptions extends OpenOptions {
+export interface ReadOptions {
+  readonly signal?: AbortSignal;
   /** Number of rows per batch, additionally capped at approximately 16,384 cells. */
   readonly batchSize?: number;
   /** Read cached values (default) or formula text. Formulas are never evaluated. */
   readonly content?: 'values' | 'formulas';
+  /** Maximum cells in the used rectangle, including holes. Zero accepts empty ranges only. */
   readonly maxCells?: number;
+}
+
+export interface ReadSheetOptions extends ReadOptions, OpenOptions {
+  /** Sheet name or zero-based index. Defaults to the first sheet. */
+  readonly sheet?: SheetSelector;
+}
+
+export interface ReadWorkbookOptions extends ReadOptions, OpenOptions {
+  /** Defaults to all worksheets in workbook order. An empty list reads metadata only. */
+  readonly sheets?: 'all' | readonly SheetSelector[];
+  /** Maximum cells across all selected sheets, including holes. */
+  readonly maxCells?: number;
+  readonly includeVba?: boolean;
+  /** Maximum decoded VBA source bytes, when includeVba is true. */
+  readonly maxVbaBytes?: number;
+}
+
+/** Fully materialized data. No native handle or disposal obligation remains. */
+export interface WorkbookResult {
+  readonly format: string;
+  readonly sheets: SheetResult[];
+  readonly definedNames: readonly Readonly<DefinedName>[];
+  /** Absent when not requested; null when requested but the workbook has no VBA. */
+  readonly vbaProject?: VbaProject | null;
 }
 
 export interface ReaderOptions {
@@ -48,17 +77,19 @@ export interface ReaderOptions {
   readonly experimentalFormats?: readonly ('xlsb' | 'ods')[];
 }
 
-export interface VbaOptions extends OpenOptions {
+export interface VbaOptions {
+  readonly signal?: AbortSignal;
   readonly maxBytes?: number;
 }
 
+/** An open workbook resource. Sheet entries are metadata; close after use. */
 export interface Workbook extends AsyncDisposable {
   readonly format: string;
   readonly sheets: readonly Readonly<SheetInfo>[];
   readonly definedNames: readonly Readonly<DefinedName>[];
   readonly closed: boolean;
-  readSheet(sheet?: string | number, options?: ReadOptions): Promise<SheetResult>;
-  readBatches(sheet?: string | number, options?: ReadOptions): AsyncGenerator<RowBatch>;
+  readSheet(sheet?: SheetSelector, options?: ReadOptions): Promise<SheetResult>;
+  readBatches(sheet?: SheetSelector, options?: ReadOptions): AsyncGenerator<RowBatch>;
   readVbaProject(options?: VbaOptions): Promise<VbaProject | null>;
 
   /** Idempotent; waits for native cleanup and removes any spooled input. */
@@ -66,6 +97,8 @@ export interface Workbook extends AsyncDisposable {
 }
 
 export interface Reader {
+  readWorkbook(input: WorkbookInput, options?: ReadWorkbookOptions): Promise<WorkbookResult>;
+  readSheet(input: WorkbookInput, options?: ReadSheetOptions): Promise<SheetResult>;
   openFile(path: string | URL, options?: OpenOptions): Promise<Workbook>;
   openBuffer(bytes: Uint8Array, options?: OpenOptions): Promise<Workbook>;
   openStream(source: ByteStream, options?: OpenOptions): Promise<Workbook>;

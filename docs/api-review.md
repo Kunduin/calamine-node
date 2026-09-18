@@ -8,15 +8,18 @@ server-side spreadsheet workloads. Preserve the bounded AsyncTask execution and
 small JS batches. Simplify ownership for ordinary callers, then use more of
 Calamine's existing cell-reader capabilities for large-data paths.
 
-This review describes proposed changes separately from the current public API.
-No proposed API names below are exported yet.
+This review records the original assessment. The follow-up implemented `readWorkbook`
+and `readSheet` convenience entry points, automatic cleanup, a workbook-wide cell
+budget, and flat sheet result metadata. Complete reads use a 512-row ceiling with
+the existing width-based cell target. Native streaming and JSON byte output remain
+proposals; the current implementation still materializes Calamine ranges.
 
 ## Scenarios
 
 | Scenario                               | Current state                                                        | Recommended direction                                                               |
 | -------------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Read one small/medium sheet            | Open, read, close; correct but verbose                               | One-shot helper that owns cleanup, while retaining batched conversion internally    |
-| Read selected/all sheets               | Caller loops and manages disposal                                    | One-shot workbook result with explicit selection and an aggregate result budget     |
+| Read one small/medium sheet            | Complete readSheet with automatic cleanup                            | One-shot helper that owns cleanup, while retaining batched conversion internally    |
+| Read selected/all sheets               | Complete readWorkbook with selection and aggregate cell budget       | One-shot workbook result with explicit selection and an aggregate result budget     |
 | Inspect names/visibility/defined names | Supported metadata                                                   | Keep lightweight and preserve format-specific eager-opening costs                   |
 | Read values and formulas               | Two reads, potentially two decompressions                            | Reuse XLSX next_cell_with_formula in a combined path when both are requested        |
 | VBA/metadata extraction                | Optional method, separate from data reads                            | Keep demand-driven; avoid macro parsing on normal reads                             |
@@ -85,7 +88,7 @@ is preferable to claiming that dense row streaming is a free wrapper around next
 Keep input, lifetime and output choices independent, without multiplying option
 combinations into an opaque universal function:
 
-1. A convenience layer for single-call sheet/workbook reads that always owns cleanup.
+1. A convenience layer for single-call sheet/workbook reads that always owns cleanup (implemented).
 2. A workbook handle for repeated reads and inspection, with a small set of methods.
 3. A large-data output path distinguishing JS rows from serialized UTF-8 bytes.
 
@@ -99,7 +102,7 @@ is not yet a discriminated union correlating its kind with its value type. Impro
 those before freezing the first public API. Keep native generated types internal
 where they would otherwise dictate an awkward JavaScript contract.
 
-## Measurements
+## Original measurements (before the complete-read follow-up)
 
 Synthetic, local-only workloads; Intel Core i5-12400, Linux x64 GNU. One warmup,
 five measured runs, warm filesystem cache, separate process per mode. Values below
@@ -137,10 +140,50 @@ allocator retention and preceding warmups; the report must not be read as provin
 constant-memory batching. In particular, batching does not consistently reduce the
 measured process high-water RSS with the current Range-based implementation.
 
+## Complete-read follow-up
+
+`readWorkbook(input, options)` returns workbook metadata and selected `SheetResult`
+objects. `readSheet(input, options)` returns one `SheetResult` of exactly the same
+shape. These results contain ordinary data and retain no native resources.
+`openFile`, `openBuffer` and `openStream` return a workbook handle with metadata,
+read methods and an explicit lifetime. There is no public sheet handle to manage.
+Keep this distinction explicit when adding features: workbook-level selection and
+budgets belong to the workbook operation; row data and coordinates belong to sheets.
+
+The new helpers reuse the existing handle implementation. The aggregate workbook
+cell budget prevents each selected sheet from independently consuming the entire
+limit. Input limits apply while opening; already-open handle read options do not
+advertise an input limit that would be too late to enforce.
+
+The [follow-up report](benchmarks/complete-reads.json) records both the batch-size
+comparison and the final complete APIs. It uses the same hardware and methodology
+as above, with sequential rounds and one-sheet synthetic inputs. Final medians:
+
+| Runtime / operation | 1,000,000 numeric cells | 100,000 long-string cells |
+| ------------------- | ----------------------: | ------------------------: |
+| Node readSheet      |                  334 ms |                     86 ms |
+| Node readWorkbook   |                  337 ms |                     82 ms |
+| Bun readSheet       |                  282 ms |                     81 ms |
+| Bun readWorkbook    |                  275 ms |                     72 ms |
+
+A 512-row default halves row-conversion calls from 196 to 98 for the numeric input
+and 40 to 20 for the string input, compared with 256 rows. A 10,000-row ceiling under
+the same 16,384-cell target reduced them further to 62 and 7, but Node string-result
+heartbeat gaps reached 7.3 ms in that candidate round. The final complete APIs' gaps
+were at most 5.4 ms on Node and 4.0 ms on Bun in these runs. These observations do
+not establish a latency bound or prove 512 rows is optimal for arbitrary cell sizes.
+
+Fewer calls did **not** consistently reduce total time. The final defaults balance
+call count and callback size; no general throughput improvement is claimed. In
+particular, numeric Node reads were slightly slower than the 256-row comparison.
+Keep `batchSize` optional, preserve the cell target, and measure representative
+workloads before changing the default again. Peak RSS varied across processes and
+includes allocator retention; these measurements do not establish a memory saving.
+
 ## Priorities before API stabilization
 
 1. Preserve verified semantics, lifecycle behavior and upstream compatibility notes.
-2. Add a convenience layer and improve public types without duplicating the parser.
+2. Keep the implemented convenience layer small and refine public types without duplicating the parser.
 3. Prototype native UTF-8 output and upstream cell-reader ingestion independently;
    compare throughput, first-batch latency, JS gaps and peak memory.
 4. Introduce byte-aware admission/output budgets where measured demand justifies them.

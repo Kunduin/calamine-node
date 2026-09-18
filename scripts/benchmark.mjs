@@ -1,7 +1,7 @@
 import { performance } from 'node:perf_hooks';
 import { stat, readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { openFile } from '../dist/index.js';
+import { openFile, readSheet, readWorkbook } from '../dist/index.js';
 import native from '../native/binding.cjs';
 const require = createRequire(import.meta.url);
 const mode = process.argv[3];
@@ -10,6 +10,12 @@ const path = process.argv[2];
 if (!path || !mode)
   throw new Error('Usage: node scripts/benchmark.mjs <file> <mode> [absolute SheetJS module path]');
 let jsonRows;
+let batchCalls = 0;
+const nativeBatch = native.NativeSheet.prototype.batch;
+native.NativeSheet.prototype.batch = function (...args) {
+  batchCalls++;
+  return nativeBatch.apply(this, args);
+};
 if (mode === 'stringify' || mode === 'parse-json') {
   const book = await openFile(path);
   try {
@@ -20,6 +26,8 @@ if (mode === 'stringify' || mode === 'parse-json') {
   if (mode === 'parse-json') jsonRows = JSON.stringify(jsonRows);
 }
 async function operation() {
+  if (mode === 'complete-sheet') return (await readSheet(path)).rowCount;
+  if (mode === 'complete-workbook') return (await readWorkbook(path)).sheets[0].rowCount;
   if (mode === 'stringify') return Buffer.byteLength(JSON.stringify(jsonRows));
   if (mode === 'parse-json') return JSON.parse(jsonRows).length;
   if (mode === 'sheetjs') {
@@ -45,6 +53,8 @@ async function operation() {
   const book = await openFile(path);
   try {
     if (mode === 'read-sheet') return (await book.readSheet()).rows.length;
+    if (mode === 'read-sheet-256') return (await book.readSheet(0, { batchSize: 256 })).rows.length;
+    if (mode === 'read-sheet-512') return (await book.readSheet(0, { batchSize: 512 })).rows.length;
     let count = 0;
     for await (const batch of book.readBatches(0, { batchSize: 1024 })) count += batch.rows.length;
     return count;
@@ -58,6 +68,7 @@ for (let run = 0; run < 5; run++) {
   globalThis.gc?.();
   await new Promise((r) => setTimeout(r, 10));
   const heapBefore = process.memoryUsage().heapUsed;
+  batchCalls = 0;
   let last = performance.now(),
     delay = 0,
     ticks = 0;
@@ -79,6 +90,7 @@ for (let run = 0; run < 5; run++) {
     ticks,
     heapDeltaMiB: (heapAfter - heapBefore) / 1048576,
     count,
+    batchCalls,
   });
 }
 function median(key) {
@@ -96,5 +108,6 @@ console.log(
     p50HeapDeltaMiB: median('heapDeltaMiB'),
     peakRssMiB: process.resourceUsage().maxRSS / 1024,
     count: samples[0].count,
+    batchCalls: samples[0].batchCalls,
   }),
 );

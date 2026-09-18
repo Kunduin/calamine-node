@@ -26,13 +26,24 @@ try {
     await readFile(join(temporary, 'node_modules/calamine-node/package.json'), 'utf8'),
   );
   assert.equal(manifest.name, 'calamine-node');
+  assert.equal(manifest.license, 'MIT');
+  const packagedFiles = await readdir(join(temporary, 'node_modules/calamine-node'));
+  assert.ok(packagedFiles.includes('LICENSE'));
+  assert.ok(packagedFiles.includes('THIRD_PARTY_LICENSES.txt'));
+  assert.equal(packagedFiles.includes('NOTICE'), false);
 
   const source = `
     import assert from 'node:assert/strict';
-    import { openFile } from 'calamine-node';
+    import { openFile, readSheet, readWorkbook } from 'calamine-node';
+    const result = await readWorkbook(process.argv[2]);
+    assert.equal(result.sheets.length, 4);
+    assert.equal(result.sheets[0].name, 'Data');
+    assert.equal(result.sheets[0].rows[0][0], '中文');
+    assert.deepEqual(await readSheet(process.argv[2]), result.sheets[0]);
+    assert.deepEqual(structuredClone(result), result);
     const workbook = await openFile(process.argv[2]);
     try {
-      assert.equal((await workbook.readSheet()).rows[0][0], '中文');
+      assert.deepEqual(await workbook.readSheet(), result.sheets[0]);
     } finally {
       await workbook.close();
     }
@@ -43,10 +54,25 @@ try {
   await writeFile(
     join(temporary, 'types.ts'),
     `
-    import { openFile, type Cell } from 'calamine-node';
+    import { Readable } from 'node:stream';
+    import {
+      openFile, readSheet, readWorkbook, createReader,
+      type Cell, type WorkbookResult, type SheetResult,
+    } from 'calamine-node';
+    const result: WorkbookResult = await readWorkbook(Buffer.alloc(0), {
+      sheets: ['Sales', 0], maxCells: 100, maxInputBytes: 1_000_000, includeVba: true,
+    });
+    const sheet: SheetResult = await readSheet(new URL('file:///example.xlsx'), {
+      sheet: 'Sales', content: 'formulas', signal: new AbortController().signal,
+    });
+    const reader = createReader();
+    await reader.readWorkbook(Readable.from([Buffer.alloc(0)]));
+    await reader.readSheet(new ReadableStream<Uint8Array>());
+    const name: string = sheet.name;
+    const rows: Cell[][] | undefined = result.sheets[0]?.rows;
     const workbook = await openFile('example.xlsx');
     const cell: Cell | undefined = (await workbook.readSheet()).rows[0]?.[0];
-    console.log(cell);
+    console.log(name, rows, cell);
     await workbook.close();
   `,
   );
