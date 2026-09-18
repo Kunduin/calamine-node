@@ -91,6 +91,23 @@ test('extensionless files and buffers use upstream automatic format detection', 
   }
 });
 
+test('plain byte views retain their offsets and snapshots; shared storage is rejected', async () => {
+  const bytes = await readFile(fixture());
+  const storage = new Uint8Array(bytes.length + 16);
+  storage.set(bytes, 8);
+  const input = storage.subarray(8, 8 + bytes.length);
+  const opening = openBuffer(input);
+  input.fill(0);
+  const book = await opening;
+  try {
+    assert.equal((await book.readSheet()).rows[0]?.[0], '中文');
+  } finally {
+    await book.close();
+  }
+
+  await assert.rejects(openBuffer(new Uint8Array(new SharedArrayBuffer(16))), TypeError);
+});
+
 test('malformed inputs, filesystem errors and input limits reject', async () => {
   await assert.rejects(openBuffer(Buffer.from('not a workbook')), { code: 'ERR_WORKBOOK' });
   await assert.rejects(openBuffer(Buffer.from('PKbroken workbook')), { code: 'ERR_WORKBOOK' });

@@ -11,8 +11,13 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 calamine = "0.36.1"
-napi = { version = "3.12.6", default-features = false, features = ["napi8", "dyn-symbols"] }
+napi = { version = "3.12.6", default-features = false, features = [
+  "napi8",
+  "dyn-symbols",
+  "tokio_rt",
+] }
 napi-derive = "3.6.7"
+tokio = { version = "1.53.1", default-features = false, features = ["rt", "sync", "macros"] }
 
 [build-dependencies]
 napi-build = "2.4.3"

@@ -13,8 +13,17 @@ Advanced callers use handles or batch iteration. All paths share the same flat s
 result shape and cell semantics. Preserve readable metadata and matrix rows; optimize
 per-cell costs before shortening field names. A workbook-wide cell budget is
 aggregate, not per sheet. Keep cloud SDKs, HTTP clients, Aliyun OSS credentials,
-business ingestion logic, and database writes outside the package. A storage SDK
-supplies a byte stream to the reader.
+business ingestion logic, and database writes outside the package. The application
+can use its storage SDK to supply a Buffer, download directly to a local file, or
+supply a byte stream to the reader.
+
+After the native dependency size comparison, keep the initial scope focused on
+local paths, owned byte input, and the existing generic stream adapter. Local file
+reading is explicitly supported. Defer native HTTP/S3/OSS clients and moving stream
+I/O into Rust; the experiment is not a shipping implementation. Prioritize redundant
+input-copy reduction and parsing/output costs while preserving invocation-time
+snapshots of mutable inputs. Do not add a new async runtime solely to relocate SDK
+downloads. See `docs/benchmarks/native-size-2026-09-19.md` for measured tradeoffs.
 
 ## Toolchain
 
@@ -44,18 +53,26 @@ supplies a byte stream to the reader.
 
 ## Native and asynchronous design
 
-- Calamine parsing is synchronous CPU/blocking work. Use napi-rs `AsyncTask` with
-  owned input and a bounded admission queue. Tokio `async fn` is appropriate when
-  an operation genuinely needs Rust asynchronous I/O; synchronous parsing inside
-  it would still need `spawn_blocking` or another bounded executor.
+- Rust owns admission, concurrency, and cancellation through the napi-rs-managed
+  Tokio runtime. Calamine parsing and large explicit cleanup run in `spawn_blocking`
+  after acquiring a reader permit; never run blocking parsing on async scheduler threads.
+- Use napi-rs `AsyncBlockBuilder` where the native entry point must reserve admission
+  or snapshot borrowed bytes synchronously before returning a Promise. Async Rust
+  functions implement waiting and execution without repetitive per-operation task structs.
+  Do not create a custom runtime per reader or a duplicate JavaScript task queue.
 - Never retain borrowed JS data, an Env, or JS handles across threads. Snapshot
   mutable input at API invocation, before queuing it.
 - Use upstream Calamine automatic detection, metadata, formulas, and VBA parsing.
   Avoid implementing Excel format detection or parsing independently.
 - For automatic detection from memory, clone an immutable Arc-backed cursor;
   do not clone the entire workbook for every attempted format.
-- Define `#[napi] impl Task` before exported methods that reference the task in the
-  same module, so generated Promise types are resolved. Do not hand-edit bindings.
+- Buffer/Uint8Array input makes one immutable Rust-owned snapshot at invocation,
+  after admission and byte-limit checks. Do not add an intermediate JS Buffer copy,
+  retain mutable JS storage for background work, or claim zero-copy parsing.
+  Reject SharedArrayBuffer-backed views at the public boundary.
+- Streams stay a backpressured JS adapter. Reserve native admission before pulling
+  input and transfer the same permit to parsing, without reacquiring a queue slot.
+- Generate native bindings with the official napi-rs CLI; do not hand-edit them.
 - Keep the project license in `LICENSE` (MIT); avoid a duplicate `NOTICE` entry point.
   Preserve bundled third-party license texts separately.
 - Parsing and large explicit cleanup run in native workers. JS value construction

@@ -4,18 +4,66 @@
 
 - `src/source.rs`: Calamine input types and delegation to upstream readers.
 - `src/cell.rs`: explicit cell-value conversion, including dates/errors/large integers.
-- `src/workbook.rs`, `src/sheet.rs`, `src/vba.rs`: owned handles and napi-rs AsyncTasks.
+- `src/reader.rs`: native input admission and one-copy byte snapshots.
+- `src/executor.rs`, `src/cancellation.rs`: bounded Tokio scheduling and owned cancellation state.
+- `src/stream.rs`: a stream's native permit, transferred from JS spooling to parsing.
+- `src/workbook.rs`, `src/sheet.rs`, `src/vba.rs`: owned resources and Calamine operations.
 - `lib/reader.ts`: validated input entry points and admission configuration.
 - `lib/read.ts`: sheet selection and complete workbook collection with automatic cleanup and aggregate limits.
 - `lib/options.ts`: shared option validation and collection defaults.
 - `lib/workbook.ts`: public lifetime and iteration behavior.
-- `lib/gate.ts`, `lib/stream.ts`: bounded work admission and temporary input spooling.
+- `lib/native.ts`: AbortSignal/error adaptation at the native boundary.
+- `lib/stream.ts`: backpressured temporary input spooling.
 - `native/`: generated napi-rs loader/declarations and local compiled binaries.
 - `test/`: portable node:test suites and attributed fixtures.
 
 Read [the API review](api-review.md) before expanding the public surface. It separates
 current implementation from proposed improvements and inventories existing Calamine
 capabilities to avoid duplicating upstream functionality.
+
+Remote downloads remain an application concern. Pass a storage SDK's Buffer to
+`read`, download directly to a local file and pass its path, or use the existing
+generic stream input. Local file reading remains a native capability. The
+[native dependency size comparison](benchmarks/native-size-2026-09-19.md) informed
+the decision to defer HTTP/S3/OSS clients; its isolated probes are not part of the
+published API or the project's dependencies.
+
+## Native ownership and scheduling
+
+The exported `NativeReader` is internal to the facade. It reserves admission on the
+calling JS thread, so overflowing input is rejected before copying it. Byte views
+are borrowed only for that call and copied directly into an `Arc<[u8]>`. Calamine's
+automatic format attempts clone an Arc-backed cursor, not the full input. Paths
+are opened on a blocking worker without a preliminary JS file read.
+
+`AsyncBlockBuilder` connects a Rust future to a JS Promise while preserving that
+synchronous entry phase. The future awaits a reader semaphore, then uses Tokio's
+`spawn_blocking` for synchronous Calamine work. Parsing does not run on Tokio's
+async scheduler threads or libuv's shared worker pool. The runtime belongs to
+napi-rs; creating a reader adds semaphores, not another runtime or thread pool.
+
+A stream reserves the same admission and concurrency permits before the facade
+pulls input. JS adapts Node/Web/iterable streams and awaits each temporary-file
+write. Its permit moves into the native open operation without competing for a
+second slot. Spooling therefore holds bounded capacity without blocking a native
+thread. The native layer has no network client.
+
+A small owned watch channel carries cancellation into Rust. The JS bridge removes
+its AbortSignal listener when the native Promise settles and preserves the original
+abort reason. Waiting tasks can exit promptly; a running Calamine call retains its
+permits until it actually finishes. Returned handles are adopted and closed before
+reporting cancellation, so an abort cannot strand a range allocated during parsing.
+The native workbook also owns its active sheet range, allowing explicit close to
+release a paused iterator. Explicit cleanup bypasses public admission saturation
+but still uses the reader's concurrency limit.
+
+JS must still build JS values on its own thread. Rust prepares owned batch values;
+napi-rs creates arrays and strings on delivery. Complete reads collect bounded
+batches through the same path as handle iteration. No intermediate native JSON
+serialization or JavaScript JSON parsing is added.
+
+The [local scheduling comparison](benchmarks/native-scheduling-2026-09-19.md)
+records complete-read timings, binary size, and validation of this implementation.
 
 ## Checks
 
@@ -90,6 +138,7 @@ an installed dependency of this package.
 ```sh
 node scripts/generate-benchmarks.cjs /path/to/xlsx.js /tmp
 node --expose-gc scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx complete-workbook
+node --expose-gc scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx complete-buffer
 node --expose-gc scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx complete-sheet
 node --expose-gc scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx read-sheet-256
 node --expose-gc scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx read-sheet-512
@@ -105,6 +154,8 @@ bun scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx read-sheet
 
 The `complete-sheet` mode calls `read(path, { sheets: 0 })`; `complete-workbook` calls
 `read(path)`. Archived reports retain the API names used when measured.
+`complete-buffer` preloads bytes once outside the timed operation, then measures
+`read(buffer)`, including its synchronous input snapshot and automatic cleanup.
 
 The helper measures one warmup and five runs. Do not run competing benchmarks in
 parallel. Record hardware, runtimes, input shape, warm/cold state, first-result and

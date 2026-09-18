@@ -123,4 +123,10 @@ test('native work in a JavaScript Worker closes and exits cleanly', async () => 
     });
   });
   assert.deepEqual(result, { format: 'xlsx', first: '中文' });
+  const book = await openFile(fixture());
+  try {
+    assert.equal((await book.readSheet()).rows[0]?.[0], '中文');
+  } finally {
+    await book.close();
+  }
 });

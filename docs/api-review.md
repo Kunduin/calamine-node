@@ -4,7 +4,7 @@
 
 The current implementation has a useful asynchronous foundation and measurable
 speedups, but its public API and memory model are not a finished design for all
-server-side spreadsheet workloads. Preserve the bounded AsyncTask execution and
+server-side spreadsheet workloads. Preserve bounded native execution and
 small JS batches. Simplify ownership for ordinary callers, then use more of
 Calamine's existing cell-reader capabilities for large-data paths.
 
@@ -13,6 +13,9 @@ reads now use one `read(input, options)` entry point with sheet selection, autom
 cleanup, a workbook-wide cell budget, and flat sheet result metadata. They use a
 512-row ceiling with the existing width-based cell target. Native streaming and JSON byte output remain
 proposals; the current implementation still materializes Calamine ranges.
+The subsequent 2026-09-19 scheduling change moves admission and blocking work into
+the napi-rs-managed Tokio runtime and removes the duplicate JS queue. Byte input
+now takes one Rust-owned snapshot. See [development details](development.md).
 
 ## Scenarios
 
@@ -74,9 +77,9 @@ representations coexist while a complete JS result is collected.
 A cell reader borrows the workbook. Simply placing that borrowed reader next to its
 owner in an exported class creates a self-referential lifetime problem. Do not solve
 that by extending lifetimes with unsafe code. Evaluate safe ownership patterns with
-bounded buffers; preserve incremental progress without occupying every shared libuv
-worker while waiting for consumers. Dedicated producer threads, Tokio channels and
-thread pools all have costs and need measurements before adoption.
+bounded buffers; preserve incremental progress without occupying a blocking worker
+while waiting for consumers. The current scheduler uses Tokio, but a long-lived
+streaming producer still needs its own ownership and backpressure design.
 
 Also preserve the output contract: a dense batch requires stable origin/width, while
 the true used rectangle may not be known until traversal ends. File dimension hints

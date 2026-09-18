@@ -9,17 +9,38 @@
  */
 export declare const __napiBindingTarget: 'native' | 'wasm32-wasi' | 'wasm32-wasip1'
 
+export declare class NativeCancellation {
+  constructor()
+  cancel(): void
+}
+
+export declare class NativeReader {
+  constructor(concurrency: number, maxQueued: number)
+  openPath(path: string, maxBytes: number, signal?: NativeCancellation | undefined | null): Promise<NativeWorkbook>
+  openBytes(bytes: Uint8Array, maxBytes: number, signal?: NativeCancellation | undefined | null): Promise<NativeWorkbook>
+  reserveStream(signal?: NativeCancellation | undefined | null): Promise<NativeStreamPermit>
+}
+
 export declare class NativeSheet {
   get info(): RangeInfo
-  batch(start: number, count: number): Promise<Batch>
-  close(): Promise<void>
+  batch(start: number, count: number, signal?: NativeCancellation | undefined | null): Promise<Batch>
+  close(): Promise<undefined>
+}
+
+/**
+ * A stream holds the same admission and concurrency permits as parsing, without
+ * occupying a blocking thread while JavaScript spools its input to a file.
+ */
+export declare class NativeStreamPermit {
+  openPath(path: string, maxBytes: number, signal?: NativeCancellation | undefined | null): Promise<NativeWorkbook>
+  release(): void
 }
 
 export declare class NativeWorkbook {
   get info(): WorkbookInfo
-  loadSheet(index: number, maxCells: number, formulas: boolean): Promise<NativeSheet>
-  vbaProject(maxBytes: number): Promise<VbaProject | null>
-  close(): Promise<void>
+  loadSheet(index: number, maxCells: number, formulas: boolean, signal?: NativeCancellation | undefined | null): Promise<NativeSheet>
+  vbaProject(maxBytes: number, signal?: NativeCancellation | undefined | null): Promise<VbaProject | undefined | null>
+  close(): Promise<undefined>
 }
 
 export interface Batch {
@@ -32,10 +53,6 @@ export interface DefinedName {
   name: string
   formula: string
 }
-
-export declare function openBytes(bytes: Buffer, maxBytes: number): Promise<NativeWorkbook>
-
-export declare function openPath(path: string, maxBytes: number): Promise<NativeWorkbook>
 
 export interface RangeInfo {
   row?: number

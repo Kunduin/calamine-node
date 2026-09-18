@@ -1,13 +1,15 @@
-//! Async spreadsheet reading through Node-API.
+//! Asynchronous spreadsheet reading through Node-API.
 //!
-//! Calamine is synchronous. AsyncTask keeps its parsing and file I/O off the JS
-//! thread; the TypeScript facade bounds concurrency and JavaScript result batches.
+//! Rust owns input snapshots, task admission, parsing, and native resources.
+//! The TypeScript facade adapts inputs and delivers bounded JavaScript batches.
 
+mod cancellation;
 mod cell;
+mod executor;
+mod reader;
 mod sheet;
 mod source;
 mod state;
+mod stream;
 mod vba;
 mod workbook;
-
-pub use workbook::{open_bytes, open_path};

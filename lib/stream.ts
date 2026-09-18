@@ -7,7 +7,9 @@ const noop = (): void => {};
 export type ByteStream = AsyncIterable<Uint8Array> | ReadableStream<Uint8Array>;
 
 function getIterator(source: ByteStream): AsyncIterator<Uint8Array> {
-  if (!('getReader' in source)) return source[Symbol.asyncIterator]();
+  if (!('getReader' in source)) {
+    return source[Symbol.asyncIterator]();
+  }
   const reader = source.getReader();
   return {
     next: async () => {
@@ -34,7 +36,9 @@ async function next(
   signal?: AbortSignal,
 ): Promise<IteratorResult<Uint8Array>> {
   signal?.throwIfAborted();
-  if (!signal) return iterator.next();
+  if (!signal) {
+    return iterator.next();
+  }
   let abort: () => void = noop;
   const cancelled = new Promise<never>((_resolve, reject) => {
     abort = () => {
@@ -74,11 +78,13 @@ export async function spool(
           complete = true;
           break;
         }
-        if (!(result.value instanceof Uint8Array))
+        if (!(result.value instanceof Uint8Array)) {
           throw new TypeError('Stream chunks must be Uint8Array or Buffer');
+        }
         size += result.value.byteLength;
-        if (size > maxBytes)
+        if (size > maxBytes) {
           throw new SpreadsheetError('ERR_INPUT_LIMIT', 'Stream exceeds maxInputBytes');
+        }
         // Own the chunk while asynchronous filesystem writes are in flight.
         await file.writeFile(Buffer.from(result.value));
       }

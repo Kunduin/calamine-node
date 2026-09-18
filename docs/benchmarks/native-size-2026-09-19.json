@@ -1,0 +1,400 @@
+{
+  "date": "2026-09-19",
+  "source_commit": "1f57e633ae596b736ecedc3f70f9411b70b24bec",
+  "target": "x86_64-unknown-linux-gnu",
+  "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+  "node": "v22.23.2",
+  "bun": "1.4.1",
+  "profile": {
+    "opt_level": 3,
+    "lto": "thin",
+    "strip": "symbols",
+    "panic": "unwind"
+  },
+  "compression": {
+    "format": "gzip",
+    "level": 6,
+    "mtime": 0,
+    "scope": "one native binary; not an npm package tarball"
+  },
+  "versions": {
+    "opendal": "0.59.2",
+    "reqwest": "0.13.5",
+    "tokio": "1.53.1",
+    "futures-util": "0.3.34"
+  },
+  "original_locked_package_versions_preserved": true,
+  "cargo_lock_sha256": "f7b6683193142695489353a6db99bd570820847c14fd51665121eb20883cc459",
+  "probe_source_sha256": "1eac3d389cdccf9eb551ff3934dd0dbf6101d2b91dccfd0b8d39ffda950df729",
+  "experiment_archive": {
+    "name": "native-size-experiment.tar.gz",
+    "bytes": 602481,
+    "sha256": "b211483f9a2bb1fe82c386c049794604bda2c6612a1eea243cdb7c1d20d42674"
+  },
+  "opendal_features": [
+    "executors-tokio",
+    "layers-retry",
+    "layers-timeout",
+    "services-s3",
+    "services-oss (combined variant only)"
+  ],
+  "opendal_transport": {
+    "crate": "opendal-http-transport-reqwest",
+    "default_features": false,
+    "features": ["rustls"],
+    "initialization": "install transport directly; no service registry"
+  },
+  "variants": [
+    {
+      "variant": "baseline",
+      "features": "",
+      "command": "cargo build --release --locked --lib --target x86_64-unknown-linux-gnu --no-default-features -j 4",
+      "exit_code": 0,
+      "bytes": 1788080,
+      "gzip6_bytes": 826529,
+      "sha256": "0dfd75d72959c60663a5d5ae3bf2c7449a5786681edabe70efe2f699f87c9dcf",
+      "needed_shared_libraries": ["libgcc_s.so.1", "libc.so.6", "ld-linux-x86-64.so.2"],
+      "artifact": "baseline.node",
+      "dependency_packages_excluding_root": 61,
+      "build_elapsed_seconds_cached": 2.765
+    },
+    {
+      "variant": "tokio",
+      "features": "runtime",
+      "command": "cargo build --release --locked --lib --target x86_64-unknown-linux-gnu --no-default-features -j 4 --features runtime",
+      "exit_code": 0,
+      "bytes": 2027080,
+      "gzip6_bytes": 932852,
+      "sha256": "afd483b25d99002e61218bdea1e96c1abd475b3c300a553bdeb841301f56b4b0",
+      "needed_shared_libraries": [
+        "libgcc_s.so.1",
+        "libm.so.6",
+        "libc.so.6",
+        "ld-linux-x86-64.so.2"
+      ],
+      "artifact": "tokio.node",
+      "dependency_packages_excluding_root": 62,
+      "build_elapsed_seconds_cached": 3.124
+    },
+    {
+      "variant": "http",
+      "features": "http",
+      "command": "cargo build --release --locked --lib --target x86_64-unknown-linux-gnu --no-default-features -j 4 --features http",
+      "exit_code": 0,
+      "bytes": 7203456,
+      "gzip6_bytes": 2987879,
+      "sha256": "83efdc860f1f19050c774e7b646a8b10fa9b48024f5e29a7daa6b963d97af296",
+      "needed_shared_libraries": [
+        "libgcc_s.so.1",
+        "libm.so.6",
+        "libc.so.6",
+        "ld-linux-x86-64.so.2"
+      ],
+      "artifact": "http.node",
+      "dependency_packages_excluding_root": 137,
+      "build_elapsed_seconds_cached": 3.51
+    },
+    {
+      "variant": "opendal-s3",
+      "features": "s3",
+      "command": "cargo build --release --locked --lib --target x86_64-unknown-linux-gnu --no-default-features -j 4 --features s3",
+      "exit_code": 0,
+      "bytes": 11152592,
+      "gzip6_bytes": 4893756,
+      "sha256": "f2521474fbbc1bbc651bddc5289c21e0d002916682e65fb0877fa48c64f6a6c1",
+      "needed_shared_libraries": [
+        "libgcc_s.so.1",
+        "libm.so.6",
+        "libc.so.6",
+        "ld-linux-x86-64.so.2"
+      ],
+      "artifact": "opendal-s3.node",
+      "dependency_packages_excluding_root": 191,
+      "build_elapsed_seconds_cached": 6.032
+    },
+    {
+      "variant": "opendal-s3-oss",
+      "features": "s3,oss",
+      "command": "cargo build --release --locked --lib --target x86_64-unknown-linux-gnu --no-default-features -j 4 --features s3,oss",
+      "exit_code": 0,
+      "bytes": 12234904,
+      "gzip6_bytes": 5299951,
+      "sha256": "d6e7395bd7514eda428fe7feff51067cb9d1f4a80d40b62694c83ec3a069b991",
+      "needed_shared_libraries": [
+        "libgcc_s.so.1",
+        "libm.so.6",
+        "libc.so.6",
+        "ld-linux-x86-64.so.2"
+      ],
+      "artifact": "opendal-s3-oss.node",
+      "dependency_packages_excluding_root": 193,
+      "build_elapsed_seconds_cached": 6.765
+    }
+  ],
+  "verification": [
+    {
+      "runtime": "node",
+      "variant": "baseline",
+      "exit_code": 0,
+      "command": ["node", "smoke.cjs", "baseline"],
+      "checks": {
+        "variant": "baseline",
+        "nativeLoad": true,
+        "localParse": true
+      }
+    },
+    {
+      "runtime": "node",
+      "variant": "tokio",
+      "exit_code": 0,
+      "command": ["node", "smoke.cjs", "tokio"],
+      "checks": {
+        "variant": "tokio",
+        "nativeLoad": true,
+        "localParse": true
+      }
+    },
+    {
+      "runtime": "node",
+      "variant": "http",
+      "exit_code": 0,
+      "command": ["node", "smoke.cjs", "http"],
+      "checks": {
+        "variant": "http",
+        "nativeLoad": true,
+        "localParse": true,
+        "downloadedAndParsed": ["http"],
+        "repeatedReads": true,
+        "inputLimit": true,
+        "requests": [
+          {
+            "method": "GET",
+            "path": "/cells.xlsx"
+          },
+          {
+            "method": "GET",
+            "path": "/cells.xlsx"
+          },
+          {
+            "method": "GET",
+            "path": "/cells.xlsx"
+          }
+        ]
+      }
+    },
+    {
+      "runtime": "node",
+      "variant": "opendal-s3",
+      "exit_code": 0,
+      "command": ["node", "smoke.cjs", "opendal-s3"],
+      "checks": {
+        "variant": "opendal-s3",
+        "nativeLoad": true,
+        "localParse": true,
+        "downloadedAndParsed": ["s3"],
+        "repeatedReads": true,
+        "inputLimit": true,
+        "requests": [
+          {
+            "method": "GET",
+            "path": "/fixture-bucket/cells.xlsx",
+            "authorizationScheme": "AWS4-HMAC-SHA256"
+          },
+          {
+            "method": "GET",
+            "path": "/fixture-bucket/cells.xlsx",
+            "authorizationScheme": "AWS4-HMAC-SHA256"
+          },
+          {
+            "method": "GET",
+            "path": "/fixture-bucket/cells.xlsx",
+            "authorizationScheme": "AWS4-HMAC-SHA256"
+          }
+        ]
+      }
+    },
+    {
+      "runtime": "node",
+      "variant": "opendal-s3-oss",
+      "exit_code": 0,
+      "command": ["node", "smoke.cjs", "opendal-s3-oss"],
+      "checks": {
+        "variant": "opendal-s3-oss",
+        "nativeLoad": true,
+        "localParse": true,
+        "downloadedAndParsed": ["s3", "oss"],
+        "repeatedReads": true,
+        "inputLimit": true,
+        "requests": [
+          {
+            "method": "GET",
+            "path": "/fixture-bucket/cells.xlsx",
+            "authorizationScheme": "AWS4-HMAC-SHA256"
+          },
+          {
+            "method": "GET",
+            "path": "/fixture-bucket/cells.xlsx",
+            "authorizationScheme": "AWS4-HMAC-SHA256"
+          },
+          {
+            "method": "GET",
+            "path": "/fixture-bucket/cells.xlsx",
+            "authorizationScheme": "AWS4-HMAC-SHA256"
+          },
+          {
+            "method": "GET",
+            "path": "/fixture-bucket/cells.xlsx",
+            "authorizationScheme": "OSS"
+          },
+          {
+            "method": "GET",
+            "path": "/fixture-bucket/cells.xlsx",
+            "authorizationScheme": "OSS"
+          },
+          {
+            "method": "GET",
+            "path": "/fixture-bucket/cells.xlsx",
+            "authorizationScheme": "OSS"
+          }
+        ]
+      }
+    },
+    {
+      "runtime": "bun",
+      "variant": "baseline",
+      "exit_code": 0,
+      "command": ["bun", "smoke.cjs", "baseline"],
+      "checks": {
+        "variant": "baseline",
+        "nativeLoad": true,
+        "localParse": true
+      }
+    },
+    {
+      "runtime": "bun",
+      "variant": "tokio",
+      "exit_code": 0,
+      "command": ["bun", "smoke.cjs", "tokio"],
+      "checks": {
+        "variant": "tokio",
+        "nativeLoad": true,
+        "localParse": true
+      }
+    },
+    {
+      "runtime": "bun",
+      "variant": "http",
+      "exit_code": 0,
+      "command": ["bun", "smoke.cjs", "http"],
+      "checks": {
+        "variant": "http",
+        "nativeLoad": true,
+        "localParse": true,
+        "downloadedAndParsed": ["http"],
+        "repeatedReads": true,
+        "inputLimit": true,
+        "requests": [
+          {
+            "method": "GET",
+            "path": "/cells.xlsx"
+          },
+          {
+            "method": "GET",
+            "path": "/cells.xlsx"
+          },
+          {
+            "method": "GET",
+            "path": "/cells.xlsx"
+          }
+        ]
+      }
+    },
+    {
+      "runtime": "bun",
+      "variant": "opendal-s3",
+      "exit_code": 0,
+      "command": ["bun", "smoke.cjs", "opendal-s3"],
+      "checks": {
+        "variant": "opendal-s3",
+        "nativeLoad": true,
+        "localParse": true,
+        "downloadedAndParsed": ["s3"],
+        "repeatedReads": true,
+        "inputLimit": true,
+        "requests": [
+          {
+            "method": "GET",
+            "path": "/fixture-bucket/cells.xlsx",
+            "authorizationScheme": "AWS4-HMAC-SHA256"
+          },
+          {
+            "method": "GET",
+            "path": "/fixture-bucket/cells.xlsx",
+            "authorizationScheme": "AWS4-HMAC-SHA256"
+          },
+          {
+            "method": "GET",
+            "path": "/fixture-bucket/cells.xlsx",
+            "authorizationScheme": "AWS4-HMAC-SHA256"
+          }
+        ]
+      }
+    },
+    {
+      "runtime": "bun",
+      "variant": "opendal-s3-oss",
+      "exit_code": 0,
+      "command": ["bun", "smoke.cjs", "opendal-s3-oss"],
+      "checks": {
+        "variant": "opendal-s3-oss",
+        "nativeLoad": true,
+        "localParse": true,
+        "downloadedAndParsed": ["s3", "oss"],
+        "repeatedReads": true,
+        "inputLimit": true,
+        "requests": [
+          {
+            "method": "GET",
+            "path": "/fixture-bucket/cells.xlsx",
+            "authorizationScheme": "AWS4-HMAC-SHA256"
+          },
+          {
+            "method": "GET",
+            "path": "/fixture-bucket/cells.xlsx",
+            "authorizationScheme": "AWS4-HMAC-SHA256"
+          },
+          {
+            "method": "GET",
+            "path": "/fixture-bucket/cells.xlsx",
+            "authorizationScheme": "AWS4-HMAC-SHA256"
+          },
+          {
+            "method": "GET",
+            "path": "/fixture-bucket/cells.xlsx",
+            "authorizationScheme": "OSS"
+          },
+          {
+            "method": "GET",
+            "path": "/fixture-bucket/cells.xlsx",
+            "authorizationScheme": "OSS"
+          },
+          {
+            "method": "GET",
+            "path": "/fixture-bucket/cells.xlsx",
+            "authorizationScheme": "OSS"
+          }
+        ]
+      }
+    }
+  ],
+  "limitations": [
+    "Minimal callable input probes added to the existing parser; not a complete remote-reading implementation.",
+    "Existing parser remains AsyncTask-based; additional network probes use Tokio and spawn_blocking.",
+    "HTTPS/TLS code is enabled and linked, but requests in the smoke tests use a loopback HTTP server.",
+    "Synthetic cloud credentials; request paths and authorization schemes checked, no real cloud authentication tested.",
+    "No production access, throughput benchmark, or memory benchmark.",
+    "Linux x64 GNU host build only; no compatibility or size claim for other platforms or an older glibc.",
+    "Compilation times are cached sequential observations, not cold-build comparisons.",
+    "Native dependency count includes normal and build dependencies, excludes root, dev-only and inactive target dependencies."
+  ]
+}

@@ -9,6 +9,7 @@ const XLSX = mode === 'sheetjs' ? require(process.argv[4]) : undefined;
 const path = process.argv[2];
 if (!path || !mode)
   throw new Error('Usage: node scripts/benchmark.mjs <file> <mode> [absolute SheetJS module path]');
+const inputBuffer = mode === 'complete-buffer' ? await readFile(path) : undefined;
 let jsonRows;
 let batchCalls = 0;
 const nativeBatch = native.NativeSheet.prototype.batch;
@@ -26,6 +27,7 @@ if (mode === 'stringify' || mode === 'parse-json') {
   if (mode === 'parse-json') jsonRows = JSON.stringify(jsonRows);
 }
 async function operation() {
+  if (mode === 'complete-buffer') return (await read(inputBuffer)).sheets[0].rowCount;
   if (mode === 'complete-sheet') return (await read(path, { sheets: 0 })).sheets[0].rowCount;
   if (mode === 'complete-workbook') return (await read(path)).sheets[0].rowCount;
   if (mode === 'stringify') return Buffer.byteLength(JSON.stringify(jsonRows));
@@ -39,7 +41,7 @@ async function operation() {
     }).length;
   }
   if (mode === 'parse-only' || mode === 'single-native-batch') {
-    const book = await native.openPath(path, 64 * 1024 * 1024);
+    const book = await new native.NativeReader(2, 8).openPath(path, 64 * 1024 * 1024);
     let sheet;
     try {
       sheet = await book.loadSheet(0, 2000000, false);

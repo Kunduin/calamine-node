@@ -32,14 +32,14 @@ impl Book {
             .map_err(|e| error("ERR_WORKBOOK", e))
     }
 
-    pub(crate) fn open_bytes(bytes: Vec<u8>, max_bytes: u32) -> Result<Self> {
+    pub(crate) fn open_bytes(bytes: Arc<[u8]>, max_bytes: u32) -> Result<Self> {
         if bytes.len() > max_bytes as usize {
             return Err(error("ERR_INPUT_LIMIT", "buffer exceeds maxInputBytes"));
         }
 
         // Upstream tries multiple readers using Clone. Arc makes those retries
         // share immutable bytes instead of copying the entire workbook each time.
-        let source = Cursor::new(Arc::<[u8]>::from(bytes));
+        let source = Cursor::new(bytes);
         open_workbook_auto_from_rs(source)
             .map(Self::Bytes)
             .map_err(|e| error("ERR_WORKBOOK", e))
@@ -115,7 +115,7 @@ mod tests {
             (&include_bytes!("../test/fixtures/cells.xlsx")[..], "xlsx"),
             (&include_bytes!("../test/fixtures/cells.xls")[..], "xls"),
         ] {
-            let mut book = Book::open_bytes(bytes.to_vec(), u32::MAX)?;
+            let mut book = Book::open_bytes(Arc::from(bytes), u32::MAX)?;
             assert_eq!(book.format(), expected);
             assert_eq!(
                 book.worksheet_range("Offset")
@@ -129,6 +129,6 @@ mod tests {
 
     #[test]
     fn invalid_input_is_an_error() {
-        assert!(Book::open_bytes(b"not a workbook".to_vec(), u32::MAX).is_err());
+        assert!(Book::open_bytes(Arc::from(&b"not a workbook"[..]), u32::MAX).is_err());
     }
 }

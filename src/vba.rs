@@ -1,10 +1,7 @@
-use napi::{Env, Task, bindgen_prelude::*};
+use napi::Result;
 use napi_derive::napi;
 
-use crate::{
-    source::Book,
-    state::{Shared, error, lock},
-};
+use crate::{source::Book, state::error};
 
 #[napi(object)]
 pub struct VbaModule {
@@ -25,67 +22,42 @@ pub struct VbaProject {
     pub references: Vec<VbaReference>,
 }
 
-pub struct VbaTask {
-    state: Shared<Book>,
-    max_bytes: u32,
-}
+pub(crate) fn read_vba(workbook: &mut Book, max_bytes: u32) -> Result<Option<VbaProject>> {
+    let Some(project) = workbook.vba_project().map_err(|e| error("ERR_VBA", e))? else {
+        return Ok(None);
+    };
 
-impl VbaTask {
-    pub(crate) fn new(state: Shared<Book>, max_bytes: u32) -> Self {
-        Self { state, max_bytes }
-    }
-}
+    let mut names = project.get_module_names();
+    names.sort_unstable();
+    let mut modules = Vec::with_capacity(names.len());
+    let mut size = 0_usize;
 
-#[napi]
-impl Task for VbaTask {
-    type Output = Option<VbaProject>;
-    type JsValue = Option<VbaProject>;
-
-    fn compute(&mut self) -> Result<Self::Output> {
-        let mut guard = lock(&self.state)?;
-        let workbook = guard
-            .as_mut()
-            .ok_or_else(|| error("ERR_CLOSED", "workbook is closed"))?;
-        let Some(project) = workbook.vba_project().map_err(|e| error("ERR_VBA", e))? else {
-            return Ok(None);
-        };
-
-        let mut names = project.get_module_names();
-        names.sort_unstable();
-        let mut modules = Vec::with_capacity(names.len());
-        let mut size = 0_usize;
-
-        for name in names {
-            let source = project.get_module(name).map_err(|e| error("ERR_VBA", e))?;
-            size = size.saturating_add(source.len());
-            if size > self.max_bytes as usize {
-                return Err(error("ERR_VBA_LIMIT", "VBA source exceeds maxBytes"));
-            }
-            modules.push(VbaModule {
-                name: name.into(),
-                source,
-            });
+    for name in names {
+        let source = project.get_module(name).map_err(|e| error("ERR_VBA", e))?;
+        size = size.saturating_add(source.len());
+        if size > max_bytes as usize {
+            return Err(error("ERR_VBA_LIMIT", "VBA source exceeds maxBytes"));
         }
-
-        // Reference paths belong to the document's authoring machine. Never resolve,
-        // load or execute them on the server that reads this workbook.
-        let references = project
-            .get_references()
-            .iter()
-            .map(|reference| VbaReference {
-                name: reference.name.clone(),
-                description: reference.description.clone(),
-                path: reference.path.to_string_lossy().into_owned(),
-            })
-            .collect();
-
-        Ok(Some(VbaProject {
-            modules,
-            references,
-        }))
+        modules.push(VbaModule {
+            name: name.into(),
+            source,
+        });
     }
 
-    fn resolve(&mut self, _: Env, output: Self::Output) -> Result<Self::JsValue> {
-        Ok(output)
-    }
+    // Reference paths belong to the document's authoring machine. Never resolve,
+    // load or execute them on the server that reads this workbook.
+    let references = project
+        .get_references()
+        .iter()
+        .map(|reference| VbaReference {
+            name: reference.name.clone(),
+            description: reference.description.clone(),
+            path: reference.path.to_string_lossy().into_owned(),
+        })
+        .collect();
+
+    Ok(Some(VbaProject {
+        modules,
+        references,
+    }))
 }

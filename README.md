@@ -8,10 +8,10 @@ iterables. Parsing runs on native workers. Receive a complete worksheet or pull
 rows in batches. Ordinary calls return complete JavaScript data and clean up
 automatically; workbook handles are available for advanced use.
 
-**Status:** initial development release; not yet published to npm. Linux x64 GNU
-has been tested locally on Node 22 and Bun 1.4; Linux x64 musl has been tested on
-Node 22 in Alpine. See [platform verification and CI costs](docs/platforms.md) for
-cross-build results and the remaining runtime checks before publication.
+**Status:** initial development release; not yet published to npm. The current
+native scheduler has been tested locally on Linux x64 GNU with Node 22 and Bun 1.4.
+See [platform verification and CI costs](docs/platforms.md) for earlier cross-build
+results and the remaining platform runtime checks before publication.
 
 ## Capabilities
 
@@ -197,6 +197,14 @@ try {
 }
 ```
 
+Buffer and Uint8Array input is copied **once into Rust-owned immutable storage**,
+inside the native call and before it returns a Promise. The specified view's offset
+and length are respected. You may modify or reuse the input after calling `read`
+or `openBuffer`, including when parsing is queued. No intermediate JS Buffer is
+created. This is not a zero-copy API: sharing mutable JS memory with a background
+parser would make that guarantee unsafe. SharedArrayBuffer-backed views are rejected.
+For large inputs already on disk, pass the local path so JS never loads the file.
+
 `openStream` accepts `AsyncIterable<Uint8Array>` (including Node `Readable`) and Web
 `ReadableStream<Uint8Array>`. Buffer chunks are accepted; strings are rejected. Each
 chunk is written before pulling the next one. Empty chunks are allowed. Sources are
@@ -209,10 +217,13 @@ permission semantics). Close removes it; failures and cancellation also clean it
 An uncooperative custom iterator can ignore cancellation; the library still releases
 its own file and observes late Promise rejections.
 
-Cloud SDKs stay outside this package. For Aliyun OSS, pass the readable returned by
-your SDK's `getStream` operation to `openStream`. Authentication, retries and network
-timeouts remain the caller's responsibility. The same API works for S3, HTTP and
-other byte sources, without vendor-specific dependencies.
+Cloud SDKs stay outside this package. For Aliyun OSS, pass your SDK's downloaded
+Buffer directly to `read(buffer)`; do not wrap it in another `Buffer.from`. If your
+application downloads to a local file, use `read(path)`. For a readable download,
+pass the SDK's stream to `read` or `openStream`; the adapter spools it with backpressure.
+Authentication, retries and network timeouts remain the caller's responsibility.
+These inputs also work for S3, HTTP and other byte sources. No native HTTP client,
+OpenDAL operator, or cloud credentials are bundled into this package.
 
 ## Batches and all worksheets
 
@@ -328,9 +339,14 @@ try {
 The example lists defaults. Top-level complete-read and open functions share one
 default reader; factories create independent queues. Reuse readers so their
 concurrency limit has meaning.
-`maxQueued: 0` allows no waiting public operations; overflow rejects with
-`ERR_QUEUE_FULL`. Cleanup remains admissible so saturation cannot prevent disposal.
-Downloads occupy admission slots as well. Limits apply per reader, not process-wide.
+Rust reserves admission synchronously, before allocating a Buffer snapshot. At
+most `concurrency + maxQueued` public operations are admitted at once; overflow
+rejects with `ERR_QUEUE_FULL`. With `maxQueued: 0`, that bound is `concurrency`.
+Cleanup bypasses the admission bound but still waits for a worker slot. Streams
+hold a slot while being spooled, without occupying a native thread, and transfer it
+to parsing when the download finishes. Queued streams are not pulled by the library.
+An already-started SDK download may have its own buffering policy. Limits apply per
+reader, not process-wide, and do not limit the number of idle open handles.
 
 `maxCells` counts the whole dense used rectangle, including empty holes, and can be
 overridden for a read. Complete workbook reads share this budget across selected
@@ -341,16 +357,23 @@ shared strings, returned values and multiple open workbooks are additional memor
 For hostile documents or hard memory/time budgets, use an isolated process with OS
 limits; this API is not a decompression sandbox.
 
-Queued cancellation prevents admission. Download cancellation stops library I/O and
+Queued cancellation prevents execution and releases admission. Download cancellation stops library I/O and
 requests producer cancellation. Once Calamine computation starts, it cannot be
 interrupted mid-call; rejection waits for it to finish and resources to be cleaned
 up. The active permit is retained until the task completes. Cancellation between
 batches prevents further delivery. Abort reasons are preserved.
 
-`AsyncTask` uses the runtime's shared native worker pool. The default of two limits
-competition with filesystem/DNS/crypto work; it does not reserve threads. JS input
-snapshots and result conversion still consume JS-thread time. See the
-[napi-rs concurrency guide](https://napi.rs/docs/more/async-concurrency).
+napi-rs provides the Tokio runtime. The reader bounds work before sending Calamine
+parsing, Rust batch preparation, and explicit cleanup to `spawn_blocking`; those
+operations do not occupy libuv's filesystem/DNS/crypto pool. The stream adapter's
+asynchronous file writes still use the host runtime's filesystem facilities. Each
+reader shares the napi-rs runtime rather than creating another thread pool.
+
+Input snapshots run synchronously on the JS thread, and creating JS arrays/strings
+still requires JS-thread time. Output batching keeps each conversion bounded by
+rows and the approximate cell target; neither Tokio nor Rust object preparation
+removes that cost. See [implementation details](docs/development.md) and the
+[napi-rs async documentation](https://napi.rs/docs/concepts/async-fn).
 
 ## Errors
 

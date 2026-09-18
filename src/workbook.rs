@@ -1,13 +1,15 @@
 use std::sync::{Arc, Mutex};
 
-use napi::{Env, Task, bindgen_prelude::*};
+use napi::{Env, Result, bindgen_prelude::AsyncBlock};
 use napi_derive::napi;
 
 use crate::{
-    sheet::LoadTask,
+    cancellation::NativeCancellation,
+    executor::Executor,
+    sheet::{NativeSheet, SheetData},
     source::Book,
     state::{Shared, error, lock},
-    vba::VbaTask,
+    vba::{VbaProject, read_vba},
 };
 
 #[napi(object)]
@@ -34,30 +36,20 @@ pub struct WorkbookInfo {
     pub defined_names: Vec<DefinedName>,
 }
 
-enum Input {
-    Path(String),
-    Bytes(Vec<u8>),
-}
-
-pub struct OpenTask {
-    input: Option<Input>,
-    max_bytes: u32,
+struct WorkbookState {
+    book: Book,
+    sheet: Option<Shared<SheetData>>,
 }
 
 #[napi]
-impl Task for OpenTask {
-    type Output = NativeWorkbook;
-    type JsValue = NativeWorkbook;
+pub struct NativeWorkbook {
+    state: Shared<WorkbookState>,
+    executor: Arc<Executor>,
+    info: WorkbookInfo,
+}
 
-    fn compute(&mut self) -> Result<Self::Output> {
-        let input = self
-            .input
-            .take()
-            .ok_or_else(|| error("ERR_STATE", "task already consumed"))?;
-        let book = match input {
-            Input::Path(path) => Book::open_file(path, self.max_bytes)?,
-            Input::Bytes(bytes) => Book::open_bytes(bytes, self.max_bytes)?,
-        };
+impl NativeWorkbook {
+    pub(crate) fn new(book: Book, executor: Arc<Executor>) -> Self {
         let format = book.format().to_owned();
 
         let sheets = book
@@ -92,58 +84,15 @@ impl Task for OpenTask {
             })
             .collect();
 
-        Ok(NativeWorkbook {
-            state: Arc::new(Mutex::new(Some(book))),
+        Self {
+            state: Arc::new(Mutex::new(Some(WorkbookState { book, sheet: None }))),
+            executor,
             info: WorkbookInfo {
                 format,
                 sheets,
                 defined_names,
             },
-        })
-    }
-
-    fn resolve(&mut self, _: Env, output: Self::Output) -> Result<Self::JsValue> {
-        Ok(output)
-    }
-}
-
-#[napi]
-pub fn open_path(path: String, max_bytes: u32) -> AsyncTask<OpenTask> {
-    AsyncTask::new(OpenTask {
-        input: Some(Input::Path(path)),
-        max_bytes,
-    })
-}
-
-#[napi]
-pub fn open_bytes(bytes: Buffer, max_bytes: u32) -> AsyncTask<OpenTask> {
-    // Snapshot before scheduling. No task may borrow JavaScript memory.
-    AsyncTask::new(OpenTask {
-        input: Some(Input::Bytes(bytes.to_vec())),
-        max_bytes,
-    })
-}
-
-#[napi]
-pub struct NativeWorkbook {
-    state: Shared<Book>,
-    info: WorkbookInfo,
-}
-
-pub struct CloseBookTask(Shared<Book>);
-
-#[napi]
-impl Task for CloseBookTask {
-    type Output = ();
-    type JsValue = ();
-
-    fn compute(&mut self) -> Result<()> {
-        lock(&self.0)?.take();
-        Ok(())
-    }
-
-    fn resolve(&mut self, _: Env, _: ()) -> Result<()> {
-        Ok(())
+        }
     }
 }
 
@@ -155,22 +104,66 @@ impl NativeWorkbook {
     }
 
     #[napi]
-    pub fn load_sheet(&self, index: u32, max_cells: u32, formulas: bool) -> AsyncTask<LoadTask> {
-        AsyncTask::new(LoadTask::new(
-            self.state.clone(),
-            index,
-            max_cells,
-            formulas,
-        ))
+    pub fn load_sheet(
+        &self,
+        env: Env,
+        index: u32,
+        max_cells: u32,
+        formulas: bool,
+        signal: Option<&NativeCancellation>,
+    ) -> Result<AsyncBlock<NativeSheet>> {
+        let state = self.state.clone();
+        let executor = self.executor.clone();
+
+        self.executor.submit(&env, signal, move || {
+            let mut guard = lock(&state)?;
+            let workbook = guard
+                .as_mut()
+                .ok_or_else(|| error("ERR_CLOSED", "workbook is closed"))?;
+            if let Some(sheet) = &workbook.sheet
+                && lock(sheet)?.is_some()
+            {
+                return Err(error(
+                    "ERR_BUSY",
+                    "close the active sheet before reading another",
+                ));
+            }
+
+            let sheet =
+                NativeSheet::load(&mut workbook.book, index, max_cells, formulas, executor)?;
+            // Retain the range so workbook.close() also disposes a paused iterator.
+            workbook.sheet = Some(sheet.shared_state());
+            Ok(sheet)
+        })
     }
 
     #[napi]
-    pub fn vba_project(&self, max_bytes: u32) -> AsyncTask<VbaTask> {
-        AsyncTask::new(VbaTask::new(self.state.clone(), max_bytes))
+    pub fn vba_project(
+        &self,
+        env: Env,
+        max_bytes: u32,
+        signal: Option<&NativeCancellation>,
+    ) -> Result<AsyncBlock<Option<VbaProject>>> {
+        let state = self.state.clone();
+        self.executor.submit(&env, signal, move || {
+            let mut guard = lock(&state)?;
+            let workbook = guard
+                .as_mut()
+                .ok_or_else(|| error("ERR_CLOSED", "workbook is closed"))?;
+            read_vba(&mut workbook.book, max_bytes)
+        })
     }
 
     #[napi]
-    pub fn close(&self) -> AsyncTask<CloseBookTask> {
-        AsyncTask::new(CloseBookTask(self.state.clone()))
+    pub fn close(&self, env: Env) -> Result<AsyncBlock<()>> {
+        let state = self.state.clone();
+        self.executor.cleanup(&env, move || {
+            if let Some(workbook) = lock(&state)?.take()
+                && let Some(sheet) = workbook.sheet
+            {
+                lock(&sheet)?.take();
+            }
+            Ok(())
+        })
     }
 }

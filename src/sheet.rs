@@ -1,16 +1,21 @@
 use std::sync::{Arc, Mutex};
 
 use calamine::{Data, Range};
-use napi::{Env, Task, bindgen_prelude::*};
+use napi::{
+    Env, Result,
+    bindgen_prelude::{AsyncBlock, Either5, Null},
+};
 use napi_derive::napi;
 
 use crate::{
+    cancellation::NativeCancellation,
     cell::{CellValue, cell},
+    executor::Executor,
     source::Book,
     state::{Shared, error, lock},
 };
 
-enum SheetData {
+pub(crate) enum SheetData {
     Values(Range<Data>),
     Formulas(Range<String>),
 }
@@ -53,43 +58,24 @@ pub struct RangeInfo {
 #[napi]
 pub struct NativeSheet {
     state: Shared<SheetData>,
+    executor: Arc<Executor>,
     info: RangeInfo,
 }
 
-pub struct LoadTask {
-    state: Shared<Book>,
-    index: u32,
-    max_cells: u32,
-    formulas: bool,
-}
-
-impl LoadTask {
-    pub(crate) fn new(state: Shared<Book>, index: u32, max_cells: u32, formulas: bool) -> Self {
-        Self {
-            state,
-            index,
-            max_cells,
-            formulas,
-        }
-    }
-}
-
-#[napi]
-impl Task for LoadTask {
-    type Output = NativeSheet;
-    type JsValue = NativeSheet;
-
-    fn compute(&mut self) -> Result<Self::Output> {
-        let mut guard = lock(&self.state)?;
-        let book = guard
-            .as_mut()
-            .ok_or_else(|| error("ERR_CLOSED", "workbook is closed"))?;
+impl NativeSheet {
+    pub(crate) fn load(
+        book: &mut Book,
+        index: u32,
+        max_cells: u32,
+        formulas: bool,
+        executor: Arc<Executor>,
+    ) -> Result<Self> {
         let name = book
             .sheets_metadata()
-            .get(self.index as usize)
+            .get(index as usize)
             .map(|sheet| sheet.name.clone())
             .ok_or_else(|| error("ERR_SHEET", "sheet index is out of bounds"))?;
-        let data = if self.formulas {
+        let data = if formulas {
             SheetData::Formulas(
                 book.worksheet_formula(&name)
                     .map_err(|e| error("ERR_SHEET", e))?,
@@ -102,7 +88,7 @@ impl Task for LoadTask {
         };
         let (rows, columns) = data.size();
         // Calamine has already allocated this range: a result limit, not a memory sandbox.
-        if (rows as u64) * (columns as u64) > self.max_cells.into() {
+        if (rows as u64) * (columns as u64) > max_cells.into() {
             return Err(error(
                 "ERR_CELL_LIMIT",
                 "worksheet rectangle exceeds maxCells",
@@ -117,66 +103,19 @@ impl Task for LoadTask {
         };
         Ok(NativeSheet {
             state: Arc::new(Mutex::new(Some(data))),
+            executor,
             info,
         })
     }
 
-    fn resolve(&mut self, _: Env, output: Self::Output) -> Result<Self::JsValue> {
-        Ok(output)
+    pub(crate) fn shared_state(&self) -> Shared<SheetData> {
+        self.state.clone()
     }
 }
 
 #[napi(object)]
 pub struct Batch {
     pub rows: Vec<Vec<CellValue>>,
-}
-
-pub struct BatchTask {
-    state: Shared<SheetData>,
-    start: u32,
-    count: u32,
-}
-
-#[napi]
-impl Task for BatchTask {
-    type Output = Batch;
-    type JsValue = Batch;
-
-    fn compute(&mut self) -> Result<Self::Output> {
-        let guard = lock(&self.state)?;
-        let data = guard
-            .as_ref()
-            .ok_or_else(|| error("ERR_CLOSED", "sheet is closed"))?;
-        let (height, width) = data.size();
-        let start = (self.start as usize).min(height);
-        let end = start.saturating_add(self.count as usize).min(height);
-        Ok(Batch {
-            rows: (start..end)
-                .map(|row| (0..width).map(|col| data.cell(row, col)).collect())
-                .collect(),
-        })
-    }
-
-    fn resolve(&mut self, _: Env, output: Self::Output) -> Result<Self::JsValue> {
-        Ok(output)
-    }
-}
-
-pub struct CloseSheetTask(Shared<SheetData>);
-
-#[napi]
-impl Task for CloseSheetTask {
-    type Output = ();
-    type JsValue = ();
-
-    fn compute(&mut self) -> Result<()> {
-        lock(&self.0)?.take();
-        Ok(())
-    }
-
-    fn resolve(&mut self, _: Env, _: ()) -> Result<()> {
-        Ok(())
-    }
 }
 
 #[napi]
@@ -187,16 +126,37 @@ impl NativeSheet {
     }
 
     #[napi]
-    pub fn batch(&self, start: u32, count: u32) -> AsyncTask<BatchTask> {
-        AsyncTask::new(BatchTask {
-            state: self.state.clone(),
-            start,
-            count,
+    pub fn batch(
+        &self,
+        env: Env,
+        start: u32,
+        count: u32,
+        signal: Option<&NativeCancellation>,
+    ) -> Result<AsyncBlock<Batch>> {
+        let state = self.state.clone();
+        self.executor.submit(&env, signal, move || {
+            let guard = lock(&state)?;
+            let data = guard
+                .as_ref()
+                .ok_or_else(|| error("ERR_CLOSED", "sheet is closed"))?;
+            let (height, width) = data.size();
+            let start = (start as usize).min(height);
+            let end = start.saturating_add(count as usize).min(height);
+
+            Ok(Batch {
+                rows: (start..end)
+                    .map(|row| (0..width).map(|col| data.cell(row, col)).collect())
+                    .collect(),
+            })
         })
     }
 
     #[napi]
-    pub fn close(&self) -> AsyncTask<CloseSheetTask> {
-        AsyncTask::new(CloseSheetTask(self.state.clone()))
+    pub fn close(&self, env: Env) -> Result<AsyncBlock<()>> {
+        let state = self.state.clone();
+        self.executor.cleanup(&env, move || {
+            lock(&state)?.take();
+            Ok(())
+        })
     }
 }

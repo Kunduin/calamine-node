@@ -9,7 +9,7 @@ export function normalizeSheetOptions(
   options: SheetReadOptions,
   defaultMaxCells: number,
   defaultBatchSize: number,
-): SheetReadOptions {
+): Required<Omit<SheetReadOptions, 'signal'>> & Pick<SheetReadOptions, 'signal'> {
   const content = options.content ?? 'values';
   if (content !== 'values' && content !== 'formulas') {
     throw new TypeError('content must be values or formulas');
