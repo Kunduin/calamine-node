@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - name: Install Bun
+        run: npm install --global bun@1.4.1
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm check
+      - run: pnpm pack:check
+
+  build:
+    name: Build ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            extra: --use-napi-cross
+          - host: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            extra: --use-napi-cross
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            extra: -x
+          - host: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            extra: -x
+          - host: macos-latest
+            target: x86_64-apple-darwin
+          - host: macos-latest
+            target: aarch64-apple-darwin
+          - host: windows-latest
+            target: x86_64-pc-windows-msvc
+          - host: windows-latest
+            target: aarch64-pc-windows-msvc
+    runs-on: ${{ matrix.host }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: mlugg/setup-zig@v2
+        if: contains(matrix.target, 'musl')
+        with:
+          version: 0.15.2
+      - uses: taiki-e/install-action@v2
+        if: contains(matrix.target, 'musl')
+        with:
+          tool: cargo-zigbuild
+      - run: pnpm install --frozen-lockfile
+      - name: Build native package
+        run: pnpm exec napi build --platform --release --output-dir native --js binding.cjs --dts binding.d.cts --target ${{ matrix.target }} ${{ matrix.extra }}
+      - run: pnpm build:ts
+      - uses: actions/upload-artifact@v7
+        with:
+          name: bindings-${{ matrix.target }}
+          path: native/*.node
+          if-no-files-found: error
+
+  runtime:
+    name: Node ${{ matrix.node }} on ${{ matrix.host }}
+    strategy:
+      fail-fast: false
+      matrix:
+        host: [ubuntu-latest, macos-latest, windows-latest]
+        node: [22, 24, 26]
+    runs-on: ${{ matrix.host }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm test:compile
+      - run: pnpm test:node

@@ -1,0 +1,79 @@
+# Development conventions
+
+## Purpose and scope
+
+Build a small, reliable, read-only Calamine package for Node.js and Bun. Keep the
+public TypeScript API focused on workbook capabilities. Keep cloud SDKs, HTTP
+clients, Aliyun OSS credentials, business ingestion logic, and database writes
+outside the package. A storage SDK supplies a byte stream to `openStream`.
+
+## Toolchain
+
+- Start from the official latest napi-rs pnpm scaffold. Use pnpm for package management.
+- Use stable `typescript` 7; do not substitute `@typescript/native-preview`.
+- Use `oxfmt` and `oxlint` for JavaScript/TypeScript. Use `cargo fmt` and Clippy for Rust.
+- Pin direct JavaScript development dependencies. Commit pnpm and Cargo lockfiles.
+- Verify current versions against their official registries before upgrading.
+- Use `node:test` and `node:assert/strict`; run the same compiled tests with Node and Bun.
+- Never execute performance tests against production servers or production databases.
+
+## Readability and module boundaries
+
+- Prefer ordinary, idiomatic code over clever abstractions or densely packed statements.
+- Separate responsibilities into cohesive files; keep entry points short.
+- Use blank lines between declarations, methods, and distinct logical steps.
+- Rust attributes directly precede their declaration: no blank line after `#[napi]`
+  or `#[derive(...)]`. JSDoc directly precedes the declaration it documents.
+- Run formatters, then review readability manually. Formatters do not decide good
+  module boundaries or always remove misplaced blank lines.
+- Keep implementation fields private. Construct cross-module tasks through `new`.
+- `use` imports names; visibility is a separate Rust constraint. Keep the smallest
+  useful visibility. Use `pub(crate)` only for actual crate-internal collaboration.
+  At the crate root `pub(super)` has the same effective scope, so changing the spelling
+  alone does not improve encapsulation.
+- Avoid broad lint suppressions, `any`, unchecked casts, `unwrap`, `expect`, and unsafe Rust.
+
+## Native and asynchronous design
+
+- Calamine parsing is synchronous CPU/blocking work. Use napi-rs `AsyncTask` with
+  owned input and a bounded admission queue. Tokio `async fn` is appropriate when
+  an operation genuinely needs Rust asynchronous I/O; synchronous parsing inside
+  it would still need `spawn_blocking` or another bounded executor.
+- Never retain borrowed JS data, an Env, or JS handles across threads. Snapshot
+  mutable input at API invocation, before queuing it.
+- Use upstream Calamine automatic detection, metadata, formulas, and VBA parsing.
+  Avoid implementing Excel format detection or parsing independently.
+- For automatic detection from memory, clone an immutable Arc-backed cursor;
+  do not clone the entire workbook for every attempted format.
+- Define `#[napi] impl Task` before exported methods that reference the task in the
+  same module, so generated Promise types are resolved. Do not hand-edit bindings.
+- Parsing and large explicit cleanup run in native workers. JS value construction
+  still runs on the JS thread: bound each output batch and measure conversion costs.
+- Input streaming means backpressured spooling to a seekable temporary file.
+  Output batching does not make Calamine's worksheet allocation streaming.
+- Cancellation must retain an active permit until native work actually finishes.
+  Do not use Promise.race to pretend a native computation has stopped.
+- Close handles explicitly, release iterators in finally, and await native work
+  before graceful Worker shutdown. Never advertise abrupt Worker termination as safe.
+
+## Data correctness and release quality
+
+- Preserve coordinates, empty cells versus empty strings, error values, cached
+  formula results, calendar components, and large integer precision.
+- Do not invent timezones or evaluate formulas or VBA.
+- A result cell limit is not a hard bound on decompression or native allocations.
+- Keep synthetic fixtures and explicitly licensed upstream fixtures. Never commit
+  customer files, production workbooks, credentials, or private paths into examples.
+- Document verified capabilities, known upstream gaps, and unverified platforms.
+  Gate experimentally supported formats explicitly when correctness gaps are known.
+- Test malformed inputs, limits, ownership, cancellation, early iterator return,
+  cleanup, concurrency, native Workers, and the packed npm artifact.
+- Run `pnpm build`, `pnpm check`, and `pnpm pack:check` before a release.
+- Publishing requires complete platform artifacts and verified runtime tests;
+  the local Linux build does not establish compatibility on other platforms.
+
+## Commits
+
+Use Conventional Commit subjects such as `feat: add asynchronous workbook reading`.
+Do not add Co-authored-by trailers. Do not publish npm packages or push to a remote
+unless the user has requested it.

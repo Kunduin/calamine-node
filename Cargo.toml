@@ -1,0 +1,29 @@
+[package]
+name = "calamine_node"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Asynchronous Calamine bindings for Node.js and Bun"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+calamine = "0.36.1"
+napi = { version = "3.12.6", default-features = false, features = ["napi8", "dyn-symbols"] }
+napi-derive = "3.6.7"
+
+[build-dependencies]
+napi-build = "2.4.3"
+
+[profile.release]
+lto = "thin"
+strip = "symbols"
+
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"

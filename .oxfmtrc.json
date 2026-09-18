@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 100,
+  "semi": true,
+  "singleQuote": true,
+  "ignorePatterns": [
+    "native/",
+    "dist/",
+    "build-test/",
+    "target/",
+    "pnpm-lock.yaml",
+    "Cargo.lock",
+    "test/fixtures/"
+  ]
+}

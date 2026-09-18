@@ -1,0 +1,84 @@
+{
+  "name": "calamine-node",
+  "version": "0.1.0",
+  "description": "Asynchronous spreadsheet reading for Node.js and Bun, powered by Calamine and Node-API.",
+  "keywords": [
+    "async",
+    "bun",
+    "calamine",
+    "excel",
+    "napi-rs",
+    "spreadsheet",
+    "xls",
+    "xlsx"
+  ],
+  "license": "MIT",
+  "files": [
+    "dist",
+    "native/*.cjs",
+    "native/*.d.cts",
+    "native/*.node",
+    "README.md",
+    "LICENSE",
+    "lib",
+    "docs",
+    "NOTICE",
+    "THIRD_PARTY_LICENSES.txt",
+    "AGENT.md"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build:native": "napi build --platform --release --output-dir native --js binding.cjs --dts binding.d.cts",
+    "build:ts": "tsc -p tsconfig.build.json",
+    "build": "pnpm build:native && pnpm build:ts",
+    "typecheck": "tsc --noEmit",
+    "test:compile": "tsc -p tsconfig.test.json",
+    "test:node": "node --test --test-reporter=spec build-test/test/*.test.js",
+    "test:bun": "bun test build-test/test/*.test.js",
+    "test:rust": "cargo test --locked",
+    "test": "pnpm test:compile && pnpm test:rust && pnpm test:node && pnpm test:bun",
+    "format": "oxfmt --write . && cargo fmt",
+    "format:check": "oxfmt --check . && cargo fmt -- --check",
+    "lint": "oxlint --deny-warnings && cargo clippy --all-targets --locked -- -D warnings",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "artifacts": "napi artifacts --output-dir native",
+    "version:native": "napi version",
+    "pack:check": "node scripts/check-package.mjs",
+    "prepack": "pnpm build",
+    "benchmark": "node scripts/benchmark.mjs",
+    "notices": "node scripts/generate-notices.mjs"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "3.10.4",
+    "@types/node": "26.6.1",
+    "oxfmt": "0.68.0",
+    "oxlint": "1.83.0",
+    "typescript": "7.0.2"
+  },
+  "napi": {
+    "binaryName": "calamine-node",
+    "targets": [
+      "x86_64-unknown-linux-gnu",
+      "aarch64-unknown-linux-gnu",
+      "x86_64-unknown-linux-musl",
+      "aarch64-unknown-linux-musl",
+      "x86_64-apple-darwin",
+      "aarch64-apple-darwin",
+      "x86_64-pc-windows-msvc",
+      "aarch64-pc-windows-msvc"
+    ]
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "packageManager": "pnpm@12.4.2"
+}
