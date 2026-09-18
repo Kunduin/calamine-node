@@ -82,6 +82,10 @@ supplies a byte stream to the reader.
 - Run `pnpm build`, `pnpm check`, and `pnpm pack:check` before a release.
 - Publishing requires complete platform artifacts and verified runtime tests;
   the local Linux build does not establish compatibility on other platforms.
+- Keep the CI build matrix aligned with `napi.targets`. Test the resulting artifacts
+  on matching architectures and C runtimes; cross-compilation alone is not runtime validation.
+- Reuse build artifacts across Node versions, cache Rust compilation, bound job
+  timeouts, and keep short artifact retention. Separate measured timings from cost estimates.
 
 ## Commits
 

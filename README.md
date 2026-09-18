@@ -9,8 +9,9 @@ rows in batches. Ordinary calls return complete JavaScript data and clean up
 automatically; workbook handles are available for advanced use.
 
 **Status:** initial development release; not yet published to npm. Linux x64 GNU
-has been tested locally on Node 22 and Bun 1.4. The CI configuration targets
-additional platforms, whose compatibility must be verified before publication.
+has been tested locally on Node 22 and Bun 1.4; Linux x64 musl has been tested on
+Node 22 in Alpine. See [platform verification and CI costs](docs/platforms.md) for
+cross-build results and the remaining runtime checks before publication.
 
 ## Capabilities
 

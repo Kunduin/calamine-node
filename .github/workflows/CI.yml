@@ -15,7 +15,8 @@ concurrency:
 
 jobs:
   quality:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -26,6 +27,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: quality
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Install Bun
         run: npm install --global bun@1.4.1
       - run: pnpm install --frozen-lockfile
@@ -34,31 +39,36 @@ jobs:
       - run: pnpm pack:check
 
   build:
-    name: Build ${{ matrix.target }}
+    name: Build and test ${{ matrix.target }}
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
         include:
-          - host: ubuntu-latest
+          - host: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
             extra: --use-napi-cross
-          - host: ubuntu-latest
+          - host: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
             extra: --use-napi-cross
-          - host: ubuntu-latest
+          - host: ubuntu-24.04
             target: x86_64-unknown-linux-musl
             extra: -x
-          - host: ubuntu-latest
+          - host: ubuntu-24.04-arm
             target: aarch64-unknown-linux-musl
             extra: -x
-          - host: macos-latest
+          - host: macos-15-intel
             target: x86_64-apple-darwin
-          - host: macos-latest
+            extra: ''
+          - host: macos-15
             target: aarch64-apple-darwin
-          - host: windows-latest
+            extra: ''
+          - host: windows-2025
             target: x86_64-pc-windows-msvc
-          - host: windows-latest
+            extra: ''
+          - host: windows-11-arm
             target: aarch64-pc-windows-msvc
+            extra: ''
     runs-on: ${{ matrix.host }}
     steps:
       - uses: actions/checkout@v7
@@ -70,6 +80,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: mlugg/setup-zig@v2
         if: contains(matrix.target, 'musl')
         with:
@@ -77,34 +91,74 @@ jobs:
       - uses: taiki-e/install-action@v2
         if: contains(matrix.target, 'musl')
         with:
-          tool: cargo-zigbuild
+          tool: cargo-zigbuild@0.23.4
       - run: pnpm install --frozen-lockfile
       - name: Build native package
         run: pnpm exec napi build --platform --release --output-dir native --js binding.cjs --dts binding.d.cts --target ${{ matrix.target }} ${{ matrix.extra }}
       - run: pnpm build:ts
+      - run: pnpm test:compile
+      - name: Test Node 22 on the target architecture
+        if: ${{ !contains(matrix.target, 'musl') }}
+        run: pnpm test:node
+      - name: Test Node 22 with musl in Alpine
+        if: contains(matrix.target, 'musl')
+        run: >-
+          docker run --rm
+          --mount type=bind,source="$PWD",target=/work,readonly
+          --workdir /work
+          node:22-alpine
+          sh -c 'apk add --no-cache libgcc && node --test --test-reporter=spec build-test/test/*.test.js'
+      - name: Test Bun on Linux GNU
+        if: endsWith(matrix.target, 'linux-gnu')
+        run: |
+          npm install --global bun@1.4.1
+          pnpm test:bun
       - uses: actions/upload-artifact@v7
         with:
           name: bindings-${{ matrix.target }}
-          path: native/*.node
+          path: |
+            native/*.node
+            native/*.cjs
+            native/*.d.cts
+            dist/
+            build-test/
           if-no-files-found: error
+          retention-days: 3
 
   runtime:
     name: Node ${{ matrix.node }} on ${{ matrix.host }}
+    needs: build
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
-        host: [ubuntu-latest, macos-latest, windows-latest]
-        node: [22, 24, 26]
+        include:
+          - host: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            node: 24
+          - host: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            node: 26
+          - host: macos-15
+            target: aarch64-apple-darwin
+            node: 24
+          - host: macos-15
+            target: aarch64-apple-darwin
+            node: 26
+          - host: windows-2025
+            target: x86_64-pc-windows-msvc
+            node: 24
+          - host: windows-2025
+            target: x86_64-pc-windows-msvc
+            node: 26
     runs-on: ${{ matrix.host }}
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
-          cache: pnpm
-      - uses: dtolnay/rust-toolchain@stable
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-      - run: pnpm test:compile
-      - run: pnpm test:node
+      - uses: actions/download-artifact@v8
+        with:
+          name: bindings-${{ matrix.target }}
+          path: .
+      - run: node --test --test-reporter=spec build-test/test/*.test.js

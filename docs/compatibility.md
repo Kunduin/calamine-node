@@ -1,8 +1,9 @@
 # Compatibility and known limits
 
-The initial implementation locks Calamine 0.36.1. Node 22.23.2 and Bun 1.4.1 on
-Linux x64 GNU are the local validation environment. Other configured targets require
-CI and runtime validation before a release claims support for them.
+The initial implementation locks Calamine 0.36.1. Local runtime checks cover
+Node 22.23.2 and Bun 1.4.1 on Linux x64 GNU, plus Node 22.23.2 on Alpine 3.22 x64
+(musl). Other configured targets require matching runtime validation before a
+release claims support for them. See [platform verification](platforms.md).
 
 ## Format status
 

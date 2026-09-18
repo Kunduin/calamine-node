@@ -54,10 +54,12 @@ The napi-rs scaffold configuration lists:
 - macOS x64/arm64.
 - Windows x64/arm64, MSVC.
 
-The workflow builds artifacts for these targets and runs Node tests on native Linux,
-macOS and Windows runners. It runs Bun tests and packed-install tests on Linux.
-Cross-built arm64/musl artifacts still need matching runtime validation before
-publication. CI is configured but has not been run remotely for this new repository.
+The workflow builds and tests Node 22 on every target, using matching CPU architectures
+and Alpine containers for musl. Bun tests cover Linux GNU x64 and ARM64; the quality
+job checks packed installs. Node 24/26 tests reuse the build artifacts on Linux GNU
+x64, macOS ARM64 and Windows x64 without recompiling. CI is configured but has not
+been run remotely for this new repository. See [platform verification and costs](platforms.md)
+for local results, tooling, runner choices and billing assumptions.
 
 There is deliberately no automatic publish job. Building an artifact is not proof
 that it works on its target host.
