@@ -14,7 +14,7 @@ use crate::{
     workbook::NativeWorkbook,
 };
 
-/// A stream holds the same admission and concurrency permits as parsing, without
+/// A stream holds the same concurrency permit as parsing, without
 /// occupying a blocking thread while JavaScript spools its input to a file.
 #[napi]
 pub struct NativeStreamPermit {

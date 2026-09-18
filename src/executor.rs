@@ -11,50 +11,40 @@ use crate::{
     state::error,
 };
 
-/// Admission is reserved before copying input or starting a Rust future.
+/// Bound executing work; additional requests wait asynchronously without rejection.
 pub(crate) struct Executor {
-    admission: Arc<Semaphore>,
-    workers: Arc<Semaphore>,
-}
-
-pub(crate) struct Reservation {
-    admission: Option<OwnedSemaphorePermit>,
     workers: Arc<Semaphore>,
 }
 
 pub(crate) struct ActiveTask {
-    _admission: Option<OwnedSemaphorePermit>,
     _worker: OwnedSemaphorePermit,
 }
 
 impl Executor {
-    pub(crate) fn new(concurrency: u32, max_queued: u32) -> Result<Arc<Self>> {
-        if !(1..=128).contains(&concurrency) || max_queued > 65_536 {
-            return Err(error(
-                "ERR_INPUT",
-                "invalid reader concurrency or queue size",
-            ));
+    pub(crate) fn new(concurrency: usize) -> Result<Arc<Self>> {
+        if concurrency == 0 || concurrency > Semaphore::MAX_PERMITS {
+            return Err(error("ERR_INPUT", "invalid reader concurrency"));
         }
         Ok(Arc::new(Self {
-            admission: Arc::new(Semaphore::new((concurrency + max_queued) as usize)),
-            workers: Arc::new(Semaphore::new(concurrency as usize)),
+            workers: Arc::new(Semaphore::new(concurrency)),
         }))
     }
 
-    pub(crate) fn reserve(&self) -> Result<Reservation> {
-        let admission = self
-            .admission
-            .clone()
-            .try_acquire_owned()
-            .map_err(|_| error("ERR_QUEUE_FULL", "reader queue is full"))?;
-        Ok(Reservation {
-            admission: Some(admission),
-            workers: self.workers.clone(),
-        })
+    pub(crate) async fn acquire(&self, cancellation: &Cancellation) -> Result<ActiveTask> {
+        cancellation.check()?;
+        let worker = tokio::select! {
+            biased;
+            () = cancellation.cancelled() => return Err(error("ERR_ABORTED", "operation was cancelled")),
+            result = self.workers.clone().acquire_owned() => {
+                result.map_err(|_| error("ERR_STATE", "reader executor is closed"))?
+            }
+        };
+        cancellation.check()?;
+        Ok(ActiveTask { _worker: worker })
     }
 
     pub(crate) fn submit<T, F>(
-        &self,
+        self: &Arc<Self>,
         env: &Env,
         signal: Option<&NativeCancellation>,
         operation: F,
@@ -65,56 +55,23 @@ impl Executor {
     {
         let cancellation = Cancellation::from_signal(signal);
         cancellation.check()?;
-        self.reserve()?.run(env, cancellation, operation)
-    }
-
-    pub(crate) fn cleanup<F>(&self, env: &Env, operation: F) -> Result<AsyncBlock<()>>
-    where
-        F: FnOnce() -> Result<()> + Send + 'static,
-    {
-        // Disposal bypasses a full admission queue, but still respects worker concurrency.
-        let reservation = Reservation {
-            admission: None,
-            workers: self.workers.clone(),
-        };
-        reservation.run(env, Cancellation::default(), operation)
-    }
-}
-
-impl Reservation {
-    pub(crate) async fn acquire(self, cancellation: &Cancellation) -> Result<ActiveTask> {
-        cancellation.check()?;
-        let worker = tokio::select! {
-            biased;
-            () = cancellation.cancelled() => return Err(error("ERR_ABORTED", "operation was cancelled")),
-            result = self.workers.acquire_owned() => {
-                result.map_err(|_| error("ERR_STATE", "reader executor is closed"))?
-            }
-        };
-        cancellation.check()?;
-        Ok(ActiveTask {
-            _admission: self.admission,
-            _worker: worker,
-        })
-    }
-
-    pub(crate) fn run<T, F>(
-        self,
-        env: &Env,
-        cancellation: Cancellation,
-        operation: F,
-    ) -> Result<AsyncBlock<T>>
-    where
-        T: ToNapiValue + Send + 'static,
-        F: FnOnce() -> Result<T> + Send + 'static,
-    {
+        let executor = self.clone();
         AsyncBlockBuilder::new(async move {
-            self.acquire(&cancellation)
+            executor
+                .acquire(&cancellation)
                 .await?
                 .run(cancellation, operation)
                 .await
         })
         .build(env)
+    }
+
+    pub(crate) fn cleanup<F>(self: &Arc<Self>, env: &Env, operation: F) -> Result<AsyncBlock<()>>
+    where
+        F: FnOnce() -> Result<()> + Send + 'static,
+    {
+        // Disposal waits for a worker like other operations and cannot be cancelled.
+        self.submit(env, None, operation)
     }
 }
 
@@ -125,7 +82,7 @@ impl ActiveTask {
         F: FnOnce() -> Result<T> + Send + 'static,
     {
         tokio::task::spawn_blocking(move || {
-            // Keep both permits inside the blocking task until computation and cleanup end.
+            // Keep the worker permit until computation and cleanup actually finish.
             let _task = self;
             cancellation.check()?;
             operation()
@@ -141,31 +98,13 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn admission_is_bounded_and_released_on_drop() -> Result<()> {
-        let executor = Executor::new(1, 1)?;
-        let active = executor.reserve()?;
-        let queued = executor.reserve()?;
-        assert!(executor.reserve().is_err());
-
-        drop(queued);
-        let replacement = executor.reserve()?;
-        assert!(executor.reserve().is_err());
-        drop((active, replacement));
-        assert_eq!(executor.admission.available_permits(), 2);
-        Ok(())
-    }
-
     #[tokio::test]
-    async fn cancelling_a_waiter_releases_admission_without_a_worker() -> Result<()> {
-        let executor = Executor::new(1, 1)?;
-        let active = executor
-            .reserve()?
-            .acquire(&Cancellation::default())
-            .await?;
+    async fn cancelling_a_waiter_does_not_release_an_active_worker() -> Result<()> {
+        let executor = Executor::new(1)?;
+        let active = executor.acquire(&Cancellation::default()).await?;
         let signal = NativeCancellation::new();
         let cancellation = Cancellation::from_signal(Some(&signal));
-        let mut queued = Box::pin(executor.reserve()?.acquire(&cancellation));
+        let mut queued = Box::pin(executor.acquire(&cancellation));
 
         std::future::poll_fn(|context| {
             assert!(queued.as_mut().poll(context).is_pending());
@@ -175,7 +114,6 @@ mod tests {
         signal.cancel();
         assert!(queued.await.is_err());
         assert_eq!(executor.workers.available_permits(), 0);
-        assert!(executor.reserve().is_ok());
 
         drop(active);
         assert_eq!(executor.workers.available_permits(), 1);
@@ -184,10 +122,10 @@ mod tests {
 
     #[tokio::test]
     async fn cancellation_cannot_release_a_running_blocking_task() -> Result<()> {
-        let executor = Executor::new(1, 0)?;
+        let executor = Executor::new(1)?;
         let signal = NativeCancellation::new();
         let cancellation = Cancellation::from_signal(Some(&signal));
-        let active = executor.reserve()?.acquire(&cancellation).await?;
+        let active = executor.acquire(&cancellation).await?;
         let (started, entered) = tokio::sync::oneshot::channel();
         let (release, blocked) = std::sync::mpsc::channel();
 
@@ -200,7 +138,6 @@ mod tests {
         }));
         entered.await.map_err(|failure| error("TEST", failure))?;
         signal.cancel();
-        assert!(executor.reserve().is_err());
         assert_eq!(executor.workers.available_permits(), 0);
 
         release.send(()).map_err(|failure| error("TEST", failure))?;
@@ -208,7 +145,6 @@ mod tests {
             running.await.map_err(|failure| error("TEST", failure))??,
             42
         );
-        assert!(executor.reserve().is_ok());
         assert_eq!(executor.workers.available_permits(), 1);
         Ok(())
     }

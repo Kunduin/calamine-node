@@ -4,11 +4,11 @@
 
 - `src/source.rs`: Calamine input types and delegation to upstream readers.
 - `src/cell.rs`: explicit cell-value conversion, including dates/errors/large integers.
-- `src/reader.rs`: native input admission and one-copy byte snapshots.
+- `src/reader.rs`: native inputs and one-copy byte snapshots.
 - `src/executor.rs`, `src/cancellation.rs`: bounded Tokio scheduling and owned cancellation state.
 - `src/stream.rs`: a stream's native permit, transferred from JS spooling to parsing.
 - `src/workbook.rs`, `src/sheet.rs`, `src/vba.rs`: owned resources and Calamine operations.
-- `lib/reader.ts`: validated input entry points and admission configuration.
+- `lib/reader.ts`: validated input entry points and concurrency configuration.
 - `lib/read.ts`: sheet selection and complete workbook collection with automatic cleanup and aggregate limits.
 - `lib/options.ts`: shared option validation and collection defaults.
 - `lib/workbook.ts`: public lifetime and iteration behavior.
@@ -30,9 +30,8 @@ published API or the project's dependencies.
 
 ## Native ownership and scheduling
 
-The exported `NativeReader` is internal to the facade. It reserves admission on the
-calling JS thread, so overflowing input is rejected before copying it. Byte views
-are borrowed only for that call and copied directly into an `Arc<[u8]>`. Calamine's
+The exported `NativeReader` is internal to the facade. Byte views are borrowed only
+for the calling JS thread's synchronous entry and copied directly into an `Arc<[u8]>`. Calamine's
 automatic format attempts clone an Arc-backed cursor, not the full input. Paths
 are opened on a blocking worker without a preliminary JS file read.
 
@@ -40,10 +39,14 @@ are opened on a blocking worker without a preliminary JS file read.
 synchronous entry phase. The future awaits a reader semaphore, then uses Tokio's
 `spawn_blocking` for synchronous Calamine work. Parsing does not run on Tokio's
 async scheduler threads or libuv's shared worker pool. The runtime belongs to
-napi-rs; creating a reader adds semaphores, not another runtime or thread pool.
+napi-rs; creating a reader adds one semaphore, not another runtime or thread pool.
+When `concurrency` is omitted, the native constructor enters that runtime and reads
+`Handle::current().metrics().num_workers()`. This reuses Tokio's actual CPU/environment
+configuration without reimplementing it in JS or Rust. `TOKIO_WORKER_THREADS` is
+therefore honored at runtime initialization. Explicit reader limits remain supported;
+the blocking pool's separate maximum is not used as the parser's default concurrency.
 
-A stream reserves the same admission and concurrency permits before the facade
-pulls input. JS adapts Node/Web/iterable streams and awaits each temporary-file
+A stream acquires the same concurrency permit before the facade pulls input. JS adapts Node/Web/iterable streams and awaits each temporary-file
 write. Its permit moves into the native open operation without competing for a
 second slot. Spooling therefore holds bounded capacity without blocking a native
 thread. The native layer has no network client.
@@ -54,8 +57,11 @@ abort reason. Waiting tasks can exit promptly; a running Calamine call retains i
 permits until it actually finishes. Returned handles are adopted and closed before
 reporting cancellation, so an abort cannot strand a range allocated during parsing.
 The native workbook also owns its active sheet range, allowing explicit close to
-release a paused iterator. Explicit cleanup bypasses public admission saturation
-but still uses the reader's concurrency limit.
+release a paused iterator. Explicit cleanup waits for an execution slot and cannot be cancelled.
+Extra work queues automatically with no queue-length option or queue-full error.
+The executor has one semaphore for running work; no second admission quota exists.
+Queued Buffer snapshots still occupy memory, while queued paths do not open files
+and queued streams are not pulled until they obtain a permit.
 
 JS must still build JS values on its own thread. Rust prepares owned batch values;
 napi-rs creates arrays and strings on delivery. Complete reads collect bounded
@@ -64,6 +70,10 @@ serialization or JavaScript JSON parsing is added.
 
 The [local scheduling comparison](benchmarks/native-scheduling-2026-09-19.md)
 records complete-read timings, binary size, and validation of this implementation.
+The [concurrency follow-up](benchmarks/concurrency-2026-09-19.md) separates main-thread
+CPU from elapsed time and records the switch to a runtime-derived default limit.
+The [Rayon experiment](benchmarks/rayon-2026-09-19.md) compares the CPU executor at
+matched concurrency and records why Tokio remains the shipping implementation.
 
 ## Checks
 

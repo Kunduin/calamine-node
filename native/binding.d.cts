@@ -15,7 +15,7 @@ export declare class NativeCancellation {
 }
 
 export declare class NativeReader {
-  constructor(concurrency: number, maxQueued: number)
+  constructor(concurrency?: number | undefined | null)
   openPath(path: string, maxBytes: number, signal?: NativeCancellation | undefined | null): Promise<NativeWorkbook>
   openBytes(bytes: Uint8Array, maxBytes: number, signal?: NativeCancellation | undefined | null): Promise<NativeWorkbook>
   reserveStream(signal?: NativeCancellation | undefined | null): Promise<NativeStreamPermit>
@@ -28,7 +28,7 @@ export declare class NativeSheet {
 }
 
 /**
- * A stream holds the same admission and concurrency permits as parsing, without
+ * A stream holds the same concurrency permit as parsing, without
  * occupying a blocking thread while JavaScript spools its input to a file.
  */
 export declare class NativeStreamPermit {

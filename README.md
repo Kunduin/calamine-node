@@ -26,7 +26,7 @@ results and the remaining platform runtime checks before publication.
 | Defined names                      | Name and formula strings, as reported by Calamine                             |
 | VBA                                | Extract module source and reference metadata on request; never execute macros |
 | Dates and cell errors              | Preserve explicit tagged values instead of guessing JS Date timezones         |
-| Cancellation                       | AbortSignal for admission, download and result delivery                       |
+| Cancellation                       | AbortSignal for queued work, download and result delivery                     |
 | Disposal                           | Idempotent close and Symbol.asyncDispose                                      |
 
 This is a reader. It does not write spreadsheets, recalculate formulas, render
@@ -320,8 +320,7 @@ The source size limit is checked after Calamine extracts it, before returning to
 import { createReader } from 'calamine-node';
 
 const reader = createReader({
-  concurrency: 2,
-  maxQueued: 8,
+  // concurrency: 4, // Optional override; omission follows Tokio's worker count.
   maxInputBytes: 64 * 1024 * 1024,
   maxCells: 2_000_000,
   // tempDirectory: '/data/tmp',
@@ -336,17 +335,31 @@ try {
 }
 ```
 
-The example lists defaults. Top-level complete-read and open functions share one
-default reader; factories create independent queues. Reuse readers so their
-concurrency limit has meaning.
-Rust reserves admission synchronously, before allocating a Buffer snapshot. At
-most `concurrency + maxQueued` public operations are admitted at once; overflow
-rejects with `ERR_QUEUE_FULL`. With `maxQueued: 0`, that bound is `concurrency`.
-Cleanup bypasses the admission bound but still waits for a worker slot. Streams
-hold a slot while being spooled, without occupying a native thread, and transfer it
-to parsing when the download finishes. Queued streams are not pulled by the library.
-An already-started SDK download may have its own buffering policy. Limits apply per
-reader, not process-wide, and do not limit the number of idle open handles.
+The example lists defaults, with optional overrides commented out. Omitted
+`concurrency` uses the actual worker count of napi-rs's Tokio runtime: normally the
+number of available logical CPUs, with Tokio's `TOKIO_WORKER_THREADS` override
+honored when set before loading the addon. An explicit `concurrency` (1–128)
+overrides the reader's limit without resizing that shared runtime.
+
+This is a bound on CPU-heavy blocking operations. It follows Tokio's async worker
+count, not the separate `spawn_blocking` pool's default ceiling of 512 threads.
+See [Tokio's runtime configuration](https://docs.rs/tokio/latest/tokio/runtime/struct.Builder.html#method.worker_threads).
+Top-level complete-read and open functions share one default reader; factories
+create independent queues. Reuse readers so their concurrency limit has meaning.
+Additional requests **wait automatically** until an execution slot becomes free.
+There is no queue-length option or queue-full error. Waiting does not occupy a
+worker or block the JS event loop, and an AbortSignal can cancel a waiting request.
+
+Streams hold a slot while being spooled, without occupying a native thread, and
+transfer it to parsing when the download finishes. Queued streams are not pulled
+by the library. An already-started SDK download may have its own buffering policy.
+Local files are opened only after a slot becomes available. Buffer snapshots are
+taken at invocation and stay resident while queued, so total queued bytes still
+matter when submitting many in-memory files. Completed JS results also remain in
+memory for as long as the caller retains them. Concurrency applies per reader,
+not process-wide, and does not limit idle open handles or the total number of
+partially collected workbooks. Automatic waiting handles a burst; it does not
+bound memory if submissions continually outpace completion.
 
 `maxCells` counts the whole dense used rectangle, including empty holes, and can be
 overridden for a read. Complete workbook reads share this budget across selected
@@ -357,7 +370,7 @@ shared strings, returned values and multiple open workbooks are additional memor
 For hostile documents or hard memory/time budgets, use an isolated process with OS
 limits; this API is not a decompression sandbox.
 
-Queued cancellation prevents execution and releases admission. Download cancellation stops library I/O and
+Queued cancellation prevents execution and releases the queued input. Download cancellation stops library I/O and
 requests producer cancellation. Once Calamine computation starts, it cannot be
 interrupted mid-call; rejection waits for it to finish and resources to be cleaned
 up. The active permit is retained until the task completes. Cancellation between
@@ -387,7 +400,7 @@ raise `TypeError`; upstream input-stream errors and AbortSignal reasons pass thr
 | `ERR_SHEET`                                          | Unknown sheet or failure to read its range/formulas              |
 | `ERR_INPUT_LIMIT`, `ERR_CELL_LIMIT`, `ERR_VBA_LIMIT` | Configured limit exceeded                                        |
 | `ERR_EXPERIMENTAL_FORMAT`                            | XLSB/ODS requires explicit experimental opt-in                   |
-| `ERR_QUEUE_FULL`, `ERR_BUSY`                         | Admission or workbook concurrency boundary                       |
+| `ERR_BUSY`                                           | Another read operation is active on the same workbook handle     |
 | `ERR_CLOSED`                                         | Workbook or iterator has been closed                             |
 | `ERR_VBA`, `ERR_STATE`                               | VBA extraction failure or invalid native state                   |
 

@@ -13,28 +13,30 @@ reads now use one `read(input, options)` entry point with sheet selection, autom
 cleanup, a workbook-wide cell budget, and flat sheet result metadata. They use a
 512-row ceiling with the existing width-based cell target. Native streaming and JSON byte output remain
 proposals; the current implementation still materializes Calamine ranges.
-The subsequent 2026-09-19 scheduling change moves admission and blocking work into
+The subsequent 2026-09-19 scheduling change moves concurrency control and blocking work into
 the napi-rs-managed Tokio runtime and removes the duplicate JS queue. Byte input
-now takes one Rust-owned snapshot. See [development details](development.md).
+now takes one Rust-owned snapshot. The later API simplification removes the public
+queue-length bound and queue-full error: excess work waits automatically, with
+CPU-based executing concurrency. See [development details](development.md).
 
 ## Scenarios
 
-| Scenario                               | Current state                                                        | Recommended direction                                                               |
-| -------------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Read one small/medium sheet            | read with a single selector and automatic cleanup                    | Stable workbook result with one selected sheet and batched conversion internally    |
-| Read selected/all sheets               | read with selection and aggregate cell budget                        | One-shot workbook result with explicit selection and an aggregate result budget     |
-| Inspect names/visibility/defined names | Supported metadata                                                   | Keep lightweight and preserve format-specific eager-opening costs                   |
-| Read values and formulas               | Two reads, potentially two decompressions                            | Reuse XLSX next_cell_with_formula in a combined path when both are requested        |
-| VBA/metadata extraction                | Optional method, separate from data reads                            | Keep demand-driven; avoid macro parsing on normal reads                             |
-| Large row ingestion                    | Pull batches; native full Range allocation remains                   | Reuse upstream cell readers with bounded buffering and an explicit ownership design |
-| Huge sparse sheets                     | Dense bounding rectangle can amplify memory; limit is late           | Cell-oriented traversal or sparse output before dense materialization               |
-| JSON for storage/HTTP                  | Caller creates JS objects, then JSON.stringify                       | Native serialization to UTF-8 buffers/chunks; avoid an unnecessary JS object graph  |
-| JSON for JS computation                | Returning native JSON still needs JSON.parse                         | Prefer typed rows/batches; benchmark before adding a string round trip              |
-| Aliyun OSS/S3/HTTP streams             | Generic spool-to-file input with backpressure                        | Keep generic input; upstream needs seekable data, not a cloud SDK                   |
-| Bursts/many open workbooks             | Task queue bounded; resident inputs and handles not globally bounded | Account for admitted bytes, open handles, and aggregate results                     |
-| Cancellation/Worker shutdown           | Cooperative boundaries and explicit close                            | Keep graceful shutdown; document cancellation latency of running Calamine calls     |
-| Node/Bun and multiple platforms        | Linux Node/Bun tests pass                                            | Validate platform artifacts and packed installs; no inferred cross-platform claims  |
-| Workbook-specific features             | Some APIs omitted                                                    | Map proven upstream features separately; do not design another spreadsheet engine   |
+| Scenario                               | Current state                                                                 | Recommended direction                                                               |
+| -------------------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Read one small/medium sheet            | read with a single selector and automatic cleanup                             | Stable workbook result with one selected sheet and batched conversion internally    |
+| Read selected/all sheets               | read with selection and aggregate cell budget                                 | One-shot workbook result with explicit selection and an aggregate result budget     |
+| Inspect names/visibility/defined names | Supported metadata                                                            | Keep lightweight and preserve format-specific eager-opening costs                   |
+| Read values and formulas               | Two reads, potentially two decompressions                                     | Reuse XLSX next_cell_with_formula in a combined path when both are requested        |
+| VBA/metadata extraction                | Optional method, separate from data reads                                     | Keep demand-driven; avoid macro parsing on normal reads                             |
+| Large row ingestion                    | Pull batches; native full Range allocation remains                            | Reuse upstream cell readers with bounded buffering and an explicit ownership design |
+| Huge sparse sheets                     | Dense bounding rectangle can amplify memory; limit is late                    | Cell-oriented traversal or sparse output before dense materialization               |
+| JSON for storage/HTTP                  | Caller creates JS objects, then JSON.stringify                                | Native serialization to UTF-8 buffers/chunks; avoid an unnecessary JS object graph  |
+| JSON for JS computation                | Returning native JSON still needs JSON.parse                                  | Prefer typed rows/batches; benchmark before adding a string round trip              |
+| Aliyun OSS/S3/HTTP streams             | Generic spool-to-file input with backpressure                                 | Keep generic input; upstream needs seekable data, not a cloud SDK                   |
+| Bursts/many open workbooks             | Execution bounded; waiting requests and idle handles are not globally bounded | Wait automatically; document input and result memory ownership                      |
+| Cancellation/Worker shutdown           | Cooperative boundaries and explicit close                                     | Keep graceful shutdown; document cancellation latency of running Calamine calls     |
+| Node/Bun and multiple platforms        | Linux Node/Bun tests pass                                                     | Validate platform artifacts and packed installs; no inferred cross-platform claims  |
+| Workbook-specific features             | Some APIs omitted                                                             | Map proven upstream features separately; do not design another spreadsheet engine   |
 
 ## What Calamine already provides
 
@@ -95,7 +97,7 @@ combinations into an opaque universal function:
 2. A workbook handle for repeated reads and inspection, with a small set of methods.
 3. A large-data output path distinguishing JS rows from serialized UTF-8 bytes.
 
-Factories are for applications that need admission limits; ordinary callers should
+Factories are for applications that need custom concurrency limits; ordinary callers should
 not have to construct a scheduler. Keep cell semantics identical across all layers.
 Avoid automatic header-to-object conversion without a policy for duplicate/empty
 headers, unstable schemas, error cells and names such as `__proto__`.
@@ -191,7 +193,7 @@ includes allocator retention; these measurements do not establish a memory savin
 2. Keep the implemented convenience layer small and refine public types without duplicating the parser.
 3. Prototype native UTF-8 output and upstream cell-reader ingestion independently;
    compare throughput, first-batch latency, JS gaps and peak memory.
-4. Introduce byte-aware admission/output budgets where measured demand justifies them.
+4. Keep automatic waiting for bursts; improve large-data consumption without queue-full errors.
 5. Expand optional workbook features through existing Calamine APIs with fixtures.
 
 A larger feature list is not, by itself, a better binding. The target is a small,

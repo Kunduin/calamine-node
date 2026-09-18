@@ -1,8 +1,22 @@
 import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 import { createReader } from 'calamine-node';
 import { fixture } from './helpers.js';
+
+for (const mode of ['default', 'explicit']) {
+  test(`reader concurrency uses the ${mode} runtime configuration`, async () => {
+    const { stdout } = await promisify(execFile)(
+      process.execPath,
+      [fileURLToPath(new URL('./runtime-defaults.js', import.meta.url)), mode],
+      { env: { ...process.env, TOKIO_WORKER_THREADS: '3' }, timeout: 15_000 },
+    );
+    assert.match(stdout, /Reader runs [13] operations and queues the next\./);
+  });
+}
 
 function stalledStream(): {
   source: ReadableStream<Uint8Array>;
@@ -13,8 +27,8 @@ function stalledStream(): {
   return { source, started };
 }
 
-test('native admission is shared by streams, paths and buffers; queued abort preserves its reason', async () => {
-  const reader = createReader({ concurrency: 1, maxQueued: 1 });
+test('streams, paths and buffers share execution slots; queued abort preserves its reason', async () => {
+  const reader = createReader({ concurrency: 1 });
   const bytes = await readFile(fixture());
   const running = new AbortController();
   const { source, started } = stalledStream();
@@ -26,14 +40,12 @@ test('native admission is shared by streams, paths and buffers; queued abort pre
     await started;
     const queued = new AbortController();
     const opening = reader.openBuffer(bytes, { signal: queued.signal });
-    await assert.rejects(reader.openFile(fixture()), { code: 'ERR_QUEUE_FULL' });
     const reason = new Error('cancel queued input');
     queued.abort(reason);
     await assert.rejects(opening, (error) => error === reason);
 
     const replacement = reader.openBuffer(bytes);
     bytes.fill(0);
-    await assert.rejects(reader.openFile(fixture()), { code: 'ERR_QUEUE_FULL' });
     running.abort();
     await streamRejection;
 
@@ -50,7 +62,7 @@ test('native admission is shared by streams, paths and buffers; queued abort pre
 });
 
 test('a queued stream is not pulled or locked when cancelled', async () => {
-  const reader = createReader({ concurrency: 1, maxQueued: 1 });
+  const reader = createReader({ concurrency: 1 });
   const active = stalledStream();
   const running = new AbortController();
   const streamRejection = assert.rejects(
@@ -72,8 +84,8 @@ test('a queued stream is not pulled or locked when cancelled', async () => {
   }
 });
 
-test('cleanup bypasses a full admission queue without bypassing concurrency', async () => {
-  const reader = createReader({ concurrency: 1, maxQueued: 0 });
+test('cleanup waits for a worker and remains idempotent', async () => {
+  const reader = createReader({ concurrency: 1 });
   const book = await reader.openFile(fixture());
   const running = new AbortController();
   const { source, started } = stalledStream();
@@ -85,7 +97,6 @@ test('cleanup bypasses a full admission queue without bypassing concurrency', as
     await started;
     const closing = book.close();
     assert.equal(book.close(), closing);
-    await assert.rejects(reader.openFile(fixture()), { code: 'ERR_QUEUE_FULL' });
     running.abort();
     await streamRejection;
     await closing;
@@ -94,5 +105,17 @@ test('cleanup bypasses a full admission queue without bypassing concurrency', as
     running.abort();
     await streamRejection;
     await book.close();
+  }
+});
+
+test('a burst of files waits automatically without queue-full failures', async () => {
+  const reader = createReader({ concurrency: 1 });
+  const bytes = await readFile(fixture());
+  const results = await Promise.all(
+    Array.from({ length: 40 }, (_, index) => reader.read(index % 2 === 0 ? bytes : fixture())),
+  );
+  assert.equal(results.length, 40);
+  for (const result of results) {
+    assert.equal(result.sheets[0]?.rows[0]?.[0], '中文');
   }
 });

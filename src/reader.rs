@@ -2,9 +2,12 @@ use std::sync::Arc;
 
 use napi::{
     Env, Result,
-    bindgen_prelude::{AsyncBlock, AsyncBlockBuilder, Uint8ArraySlice},
+    bindgen_prelude::{
+        AsyncBlock, AsyncBlockBuilder, Uint8ArraySlice, within_runtime_if_available,
+    },
 };
 use napi_derive::napi;
+use tokio::runtime::Handle;
 
 use crate::{
     cancellation::{Cancellation, NativeCancellation},
@@ -23,9 +26,14 @@ pub struct NativeReader {
 #[napi]
 impl NativeReader {
     #[napi(constructor)]
-    pub fn new(concurrency: u32, max_queued: u32) -> Result<Self> {
+    pub fn new(concurrency: Option<u32>) -> Result<Self> {
+        // Follow the actual napi-rs runtime, including TOKIO_WORKER_THREADS,
+        // rather than duplicating Tokio's CPU detection or environment parsing.
+        let concurrency = concurrency.map(|value| value as usize).unwrap_or_else(|| {
+            within_runtime_if_available(|| Handle::current().metrics().num_workers())
+        });
         Ok(Self {
-            executor: Executor::new(concurrency, max_queued)?,
+            executor: Executor::new(concurrency)?,
         })
     }
 
@@ -57,12 +65,11 @@ impl NativeReader {
             return Err(error("ERR_INPUT_LIMIT", "buffer exceeds maxInputBytes"));
         }
 
-        // Reject excess work before allocating a snapshot. Borrow JS bytes only
-        // during this synchronous call; background parsing owns one immutable copy.
-        let reservation = self.executor.reserve()?;
+        // Borrow JS bytes only during this synchronous call. Queued parsing
+        // retains one immutable snapshot, independent of later caller mutations.
         let snapshot = Arc::<[u8]>::from(bytes.as_ref());
         let executor = self.executor.clone();
-        reservation.run(&env, cancellation, move || {
+        self.executor.submit(&env, signal, move || {
             Book::open_bytes(snapshot, max_bytes).map(|book| NativeWorkbook::new(book, executor))
         })
     }
@@ -75,11 +82,10 @@ impl NativeReader {
     ) -> Result<AsyncBlock<NativeStreamPermit>> {
         let cancellation = Cancellation::from_signal(signal);
         cancellation.check()?;
-        let reservation = self.executor.reserve()?;
         let executor = self.executor.clone();
 
         AsyncBlockBuilder::new(async move {
-            let active = reservation.acquire(&cancellation).await?;
+            let active = executor.acquire(&cancellation).await?;
             Ok(NativeStreamPermit::new(active, executor))
         })
         .build(&env)

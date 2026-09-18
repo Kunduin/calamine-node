@@ -2,7 +2,7 @@ import binding from '../native/binding.cjs';
 import type { NativeCancellation } from '../native/binding.cjs';
 import { nativeError } from './errors.js';
 
-/** Invoke synchronously so native admission and byte snapshots precede any await. */
+/** Invoke synchronously so native byte snapshots precede any await. */
 export async function nativeOperation<T>(
   operation: (cancellation: NativeCancellation | undefined) => Promise<T>,
   signal?: AbortSignal,

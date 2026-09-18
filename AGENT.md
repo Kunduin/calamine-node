@@ -53,13 +53,20 @@ downloads. See `docs/benchmarks/native-size-2026-09-19.md` for measured tradeoff
 
 ## Native and asynchronous design
 
-- Rust owns admission, concurrency, and cancellation through the napi-rs-managed
+- Rust owns concurrency, automatic waiting, and cancellation through the napi-rs-managed
   Tokio runtime. Calamine parsing and large explicit cleanup run in `spawn_blocking`
   after acquiring a reader permit; never run blocking parsing on async scheduler threads.
-- Use napi-rs `AsyncBlockBuilder` where the native entry point must reserve admission
-  or snapshot borrowed bytes synchronously before returning a Promise. Async Rust
+- Extra requests wait automatically and do not fail because the reader is busy.
+  Do not add a public maxQueued option or queue-full rejection. Bound executing work,
+  allow queued cancellation, and keep the ordinary read API easy to use.
+- Use napi-rs `AsyncBlockBuilder` where the native entry point must snapshot borrowed
+  bytes synchronously before returning a Promise. Async Rust
   functions implement waiting and execution without repetitive per-operation task structs.
   Do not create a custom runtime per reader or a duplicate JavaScript task queue.
+- Omitted reader concurrency follows the actual napi-rs Tokio runtime's async worker
+  count, normally available logical CPUs. Honor TOKIO_WORKER_THREADS through Tokio
+  itself, and preserve an explicit per-reader override. Do not confuse async workers
+  with the separate blocking pool's 512-thread default ceiling.
 - Never retain borrowed JS data, an Env, or JS handles across threads. Snapshot
   mutable input at API invocation, before queuing it.
 - Use upstream Calamine automatic detection, metadata, formulas, and VBA parsing.
@@ -67,10 +74,10 @@ downloads. See `docs/benchmarks/native-size-2026-09-19.md` for measured tradeoff
 - For automatic detection from memory, clone an immutable Arc-backed cursor;
   do not clone the entire workbook for every attempted format.
 - Buffer/Uint8Array input makes one immutable Rust-owned snapshot at invocation,
-  after admission and byte-limit checks. Do not add an intermediate JS Buffer copy,
+  after cancellation and byte-limit checks. Do not add an intermediate JS Buffer copy,
   retain mutable JS storage for background work, or claim zero-copy parsing.
   Reject SharedArrayBuffer-backed views at the public boundary.
-- Streams stay a backpressured JS adapter. Reserve native admission before pulling
+- Streams stay a backpressured JS adapter. Acquire a native execution permit before pulling
   input and transfer the same permit to parsing, without reacquiring a queue slot.
 - Generate native bindings with the official napi-rs CLI; do not hand-edit them.
 - Keep the project license in `LICENSE` (MIT); avoid a duplicate `NOTICE` entry point.

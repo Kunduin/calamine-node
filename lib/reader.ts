@@ -20,7 +20,7 @@ import type {
   WorkbookResult,
 } from './types.js';
 
-/** Create an independent admission queue. Keep one reader per application workload. */
+/** Create a reader with its own concurrency limit. Keep one reader per application workload. */
 export function createReader(options: ReaderOptions = {}): Reader {
   const reader = new WorkbookReader(options);
   return {
@@ -39,8 +39,10 @@ class WorkbookReader implements Reader {
   readonly #directory: string;
 
   constructor(options: ReaderOptions) {
-    const concurrency = integer(options.concurrency ?? 2, 'concurrency', 1, 128);
-    const maxQueued = integer(options.maxQueued ?? 8, 'maxQueued', 0, 65_536);
+    const concurrency =
+      options.concurrency === undefined
+        ? undefined
+        : integer(options.concurrency, 'concurrency', 1, 128);
     this.#maxInputBytes = integer(options.maxInputBytes ?? 64 * 1024 * 1024, 'maxInputBytes');
     this.#maxCells = integer(options.maxCells ?? 2_000_000, 'maxCells', 0);
     this.#experimentalFormats = new Set(options.experimentalFormats ?? []);
@@ -54,7 +56,7 @@ class WorkbookReader implements Reader {
     if (typeof this.#directory !== 'string' || this.#directory.length === 0) {
       throw new TypeError('tempDirectory must be a non-empty path');
     }
-    this.#native = new binding.NativeReader(concurrency, maxQueued);
+    this.#native = new binding.NativeReader(concurrency);
   }
 
   read(input: WorkbookInput, options: ReadOptions = {}): Promise<WorkbookResult> {

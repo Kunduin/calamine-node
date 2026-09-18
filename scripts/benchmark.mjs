@@ -41,7 +41,7 @@ async function operation() {
     }).length;
   }
   if (mode === 'parse-only' || mode === 'single-native-batch') {
-    const book = await new native.NativeReader(2, 8).openPath(path, 64 * 1024 * 1024);
+    const book = await new native.NativeReader(2).openPath(path, 64 * 1024 * 1024);
     let sheet;
     try {
       sheet = await book.loadSheet(0, 2000000, false);

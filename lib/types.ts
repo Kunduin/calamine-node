@@ -63,8 +63,8 @@ export interface WorkbookResult {
 }
 
 export interface ReaderOptions {
+  /** Defaults to the napi-rs Tokio runtime's worker count (normally available logical CPUs). */
   readonly concurrency?: number;
-  readonly maxQueued?: number;
   readonly maxInputBytes?: number;
   readonly maxCells?: number;
   readonly tempDirectory?: string;
