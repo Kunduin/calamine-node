@@ -33,7 +33,7 @@ export interface OpenOptions {
   readonly maxInputBytes?: number;
 }
 
-export interface ReadOptions {
+export interface SheetReadOptions {
   readonly signal?: AbortSignal;
   /** Number of rows per batch, additionally capped at approximately 16,384 cells. */
   readonly batchSize?: number;
@@ -43,14 +43,9 @@ export interface ReadOptions {
   readonly maxCells?: number;
 }
 
-export interface ReadSheetOptions extends ReadOptions, OpenOptions {
-  /** Sheet name or zero-based index. Defaults to the first sheet. */
-  readonly sheet?: SheetSelector;
-}
-
-export interface ReadWorkbookOptions extends ReadOptions, OpenOptions {
-  /** Defaults to all worksheets in workbook order. An empty list reads metadata only. */
-  readonly sheets?: 'all' | readonly SheetSelector[];
+export interface ReadOptions extends SheetReadOptions, OpenOptions {
+  /** Name, zero-based index, or a list. Omit for all worksheets; [] reads metadata only. */
+  readonly sheets?: SheetSelector | readonly SheetSelector[];
   /** Maximum cells across all selected sheets, including holes. */
   readonly maxCells?: number;
   readonly includeVba?: boolean;
@@ -88,8 +83,8 @@ export interface Workbook extends AsyncDisposable {
   readonly sheets: readonly Readonly<SheetInfo>[];
   readonly definedNames: readonly Readonly<DefinedName>[];
   readonly closed: boolean;
-  readSheet(sheet?: SheetSelector, options?: ReadOptions): Promise<SheetResult>;
-  readBatches(sheet?: SheetSelector, options?: ReadOptions): AsyncGenerator<RowBatch>;
+  readSheet(sheet?: SheetSelector, options?: SheetReadOptions): Promise<SheetResult>;
+  readBatches(sheet?: SheetSelector, options?: SheetReadOptions): AsyncGenerator<RowBatch>;
   readVbaProject(options?: VbaOptions): Promise<VbaProject | null>;
 
   /** Idempotent; waits for native cleanup and removes any spooled input. */
@@ -97,8 +92,8 @@ export interface Workbook extends AsyncDisposable {
 }
 
 export interface Reader {
-  readWorkbook(input: WorkbookInput, options?: ReadWorkbookOptions): Promise<WorkbookResult>;
-  readSheet(input: WorkbookInput, options?: ReadSheetOptions): Promise<SheetResult>;
+  /** Read selected worksheets into ordinary data and close all resources before settling. */
+  read(input: WorkbookInput, options?: ReadOptions): Promise<WorkbookResult>;
   openFile(path: string | URL, options?: OpenOptions): Promise<Workbook>;
   openBuffer(bytes: Uint8Array, options?: OpenOptions): Promise<Workbook>;
   openStream(source: ByteStream, options?: OpenOptions): Promise<Workbook>;

@@ -7,7 +7,7 @@ import { SpreadsheetError, integer } from './errors.js';
 import { Gate } from './gate.js';
 import { spool } from './stream.js';
 import { WorkbookHandle } from './workbook.js';
-import { collectSheet, collectWorkbook, type WorkbookOpener } from './read.js';
+import { collectWorkbook, type WorkbookOpener } from './read.js';
 import type { Reader, ReaderOptions, Workbook } from './types.js';
 
 /** Create an independent admission queue. Keep one reader per application workload. */
@@ -92,8 +92,6 @@ export function createReader(options: ReaderOptions = {}): Reader {
 
   return {
     ...opener,
-    readSheet: (input, readOptions = {}) => collectSheet(opener, input, readOptions, maxCells),
-    readWorkbook: (input, readOptions = {}) =>
-      collectWorkbook(opener, input, readOptions, maxCells),
+    read: (input, readOptions = {}) => collectWorkbook(opener, input, readOptions, maxCells),
   };
 }

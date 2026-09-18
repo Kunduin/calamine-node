@@ -8,18 +8,18 @@ server-side spreadsheet workloads. Preserve the bounded AsyncTask execution and
 small JS batches. Simplify ownership for ordinary callers, then use more of
 Calamine's existing cell-reader capabilities for large-data paths.
 
-This review records the original assessment. The follow-up implemented `readWorkbook`
-and `readSheet` convenience entry points, automatic cleanup, a workbook-wide cell
-budget, and flat sheet result metadata. Complete reads use a 512-row ceiling with
-the existing width-based cell target. Native streaming and JSON byte output remain
+This review records the original assessment and subsequent improvements. Complete
+reads now use one `read(input, options)` entry point with sheet selection, automatic
+cleanup, a workbook-wide cell budget, and flat sheet result metadata. They use a
+512-row ceiling with the existing width-based cell target. Native streaming and JSON byte output remain
 proposals; the current implementation still materializes Calamine ranges.
 
 ## Scenarios
 
 | Scenario                               | Current state                                                        | Recommended direction                                                               |
 | -------------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Read one small/medium sheet            | Complete readSheet with automatic cleanup                            | One-shot helper that owns cleanup, while retaining batched conversion internally    |
-| Read selected/all sheets               | Complete readWorkbook with selection and aggregate cell budget       | One-shot workbook result with explicit selection and an aggregate result budget     |
+| Read one small/medium sheet            | read with a single selector and automatic cleanup                    | Stable workbook result with one selected sheet and batched conversion internally    |
+| Read selected/all sheets               | read with selection and aggregate cell budget                        | One-shot workbook result with explicit selection and an aggregate result budget     |
 | Inspect names/visibility/defined names | Supported metadata                                                   | Keep lightweight and preserve format-specific eager-opening costs                   |
 | Read values and formulas               | Two reads, potentially two decompressions                            | Reuse XLSX next_cell_with_formula in a combined path when both are requested        |
 | VBA/metadata extraction                | Optional method, separate from data reads                            | Keep demand-driven; avoid macro parsing on normal reads                             |
@@ -142,22 +142,24 @@ measured process high-water RSS with the current Range-based implementation.
 
 ## Complete-read follow-up
 
-`readWorkbook(input, options)` returns workbook metadata and selected `SheetResult`
-objects. `readSheet(input, options)` returns one `SheetResult` of exactly the same
-shape. These results contain ordinary data and retain no native resources.
+`read(input, options)` returns workbook metadata and selected `SheetResult` objects
+in a `sheets` array. Names, zero-based indices and lists all use the same return
+type. Omitting the selector reads all worksheets; no name is reserved as a wildcard.
+These results contain ordinary data and retain no native resources.
 `openFile`, `openBuffer` and `openStream` return a workbook handle with metadata,
 read methods and an explicit lifetime. There is no public sheet handle to manage.
 Keep this distinction explicit when adding features: workbook-level selection and
 budgets belong to the workbook operation; row data and coordinates belong to sheets.
 
-The new helpers reuse the existing handle implementation. The aggregate workbook
-cell budget prevents each selected sheet from independently consuming the entire
+The complete-read entry point reuses the existing handle implementation. The
+aggregate workbook cell budget prevents each selected sheet from consuming the entire
 limit. Input limits apply while opening; already-open handle read options do not
 advertise an input limit that would be too late to enforce.
 
 The [follow-up report](benchmarks/complete-reads.json) records both the batch-size
-comparison and the final complete APIs. It uses the same hardware and methodology
-as above, with sequential rounds and one-sheet synthetic inputs. Final medians:
+comparison before entry-point unification. It uses the same hardware and methodology
+as above, with sequential rounds and one-sheet synthetic inputs. The following
+medians retain the old API names; the old top-level exports have since been removed.
 
 | Runtime / operation | 1,000,000 numeric cells | 100,000 long-string cells |
 | ------------------- | ----------------------: | ------------------------: |

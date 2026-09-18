@@ -34,12 +34,13 @@ try {
 
   const source = `
     import assert from 'node:assert/strict';
-    import { openFile, readSheet, readWorkbook } from 'calamine-node';
-    const result = await readWorkbook(process.argv[2]);
+    import { openFile, read } from 'calamine-node';
+    const result = await read(process.argv[2]);
     assert.equal(result.sheets.length, 4);
     assert.equal(result.sheets[0].name, 'Data');
     assert.equal(result.sheets[0].rows[0][0], '中文');
-    assert.deepEqual(await readSheet(process.argv[2]), result.sheets[0]);
+    const selected = await read(process.argv[2], { sheets: 'Data' });
+    assert.deepEqual(selected, { ...result, sheets: [result.sheets[0]] });
     assert.deepEqual(structuredClone(result), result);
     const workbook = await openFile(process.argv[2]);
     try {
@@ -56,23 +57,26 @@ try {
     `
     import { Readable } from 'node:stream';
     import {
-      openFile, readSheet, readWorkbook, createReader,
-      type Cell, type WorkbookResult, type SheetResult,
+      openFile, read, createReader,
+      type Cell, type WorkbookResult, type ReadOptions, type SheetReadOptions,
     } from 'calamine-node';
-    const result: WorkbookResult = await readWorkbook(Buffer.alloc(0), {
+    const result: WorkbookResult = await read(Buffer.alloc(0), {
       sheets: ['Sales', 0], maxCells: 100, maxInputBytes: 1_000_000, includeVba: true,
     });
-    const sheet: SheetResult = await readSheet(new URL('file:///example.xlsx'), {
-      sheet: 'Sales', content: 'formulas', signal: new AbortController().signal,
-    });
+    const options: ReadOptions = {
+      sheets: 'Sales', content: 'formulas', signal: new AbortController().signal,
+    };
+    const selected: WorkbookResult = await read(new URL('file:///example.xlsx'), options);
+    const indexed: WorkbookResult = await read('example.xlsx', { sheets: 0 });
     const reader = createReader();
-    await reader.readWorkbook(Readable.from([Buffer.alloc(0)]));
-    await reader.readSheet(new ReadableStream<Uint8Array>());
-    const name: string = sheet.name;
+    await reader.read(Readable.from([Buffer.alloc(0)]));
+    await reader.read(new ReadableStream<Uint8Array>(), { sheets: ['Sales'] });
+    const name: string | undefined = selected.sheets[0]?.name;
     const rows: Cell[][] | undefined = result.sheets[0]?.rows;
     const workbook = await openFile('example.xlsx');
-    const cell: Cell | undefined = (await workbook.readSheet()).rows[0]?.[0];
-    console.log(name, rows, cell);
+    const sheetOptions: SheetReadOptions = { maxCells: 100 };
+    const cell: Cell | undefined = (await workbook.readSheet(0, sheetOptions)).rows[0]?.[0];
+    console.log(name, rows, cell, indexed);
     await workbook.close();
   `,
   );

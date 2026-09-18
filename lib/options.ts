@@ -1,15 +1,15 @@
 import { integer } from './errors.js';
-import type { ReadOptions, SheetSelector } from './types.js';
+import type { SheetReadOptions, SheetSelector } from './types.js';
 
 // Keep conversion callbacks short even for long strings, while reducing native
 // calls for complete reads. WorkbookHandle also caps each batch by cell count.
 export const collectionBatchSize = 512;
 
-export function readOptions(
-  options: ReadOptions,
+export function normalizeSheetOptions(
+  options: SheetReadOptions,
   defaultMaxCells: number,
   defaultBatchSize: number,
-): ReadOptions {
+): SheetReadOptions {
   const content = options.content ?? 'values';
   if (content !== 'values' && content !== 'formulas') {
     throw new TypeError('content must be values or formulas');

@@ -6,7 +6,7 @@
 - `src/cell.rs`: explicit cell-value conversion, including dates/errors/large integers.
 - `src/workbook.rs`, `src/sheet.rs`, `src/vba.rs`: owned handles and napi-rs AsyncTasks.
 - `lib/reader.ts`: validated input entry points and admission configuration.
-- `lib/read.ts`: complete sheet/workbook collection with automatic cleanup and aggregate limits.
+- `lib/read.ts`: sheet selection and complete workbook collection with automatic cleanup and aggregate limits.
 - `lib/options.ts`: shared option validation and collection defaults.
 - `lib/workbook.ts`: public lifetime and iteration behavior.
 - `lib/gate.ts`, `lib/stream.ts`: bounded work admission and temporary input spooling.
@@ -41,7 +41,10 @@ CommonJS import behavior is not part of the initial public compatibility contrac
 Rust's `dyn-symbols` feature allows pure Rust unit tests to link without a Node host;
 the real Node-API boundary is validated by Node and Bun integration tests. Complete
 reads and handle reads use the same sheet result shape: metadata is directly
-available as `result.name`, `result.index`, `result.kind` and `result.visibility`.
+available as `sheet.name`, `sheet.index`, `sheet.kind` and `sheet.visibility`.
+`read(input, options)` always returns `WorkbookResult`; selecting one sheet changes
+the contents of `result.sheets`, not the return type. `ReadOptions` configures complete
+reads, while `SheetReadOptions` configures a handle's `readSheet` and `readBatches`.
 
 ## Platform builds
 
@@ -97,6 +100,9 @@ node --expose-gc scripts/benchmark.mjs /tmp/calamine-strings-100k.xlsx parse-jso
 node --expose-gc scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx sheetjs /path/to/xlsx.js
 bun scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx read-sheet
 ```
+
+The `complete-sheet` mode calls `read(path, { sheets: 0 })`; `complete-workbook` calls
+`read(path)`. Archived reports retain the API names used when measured.
 
 The helper measures one warmup and five runs. Do not run competing benchmarks in
 parallel. Record hardware, runtimes, input shape, warm/cold state, first-result and

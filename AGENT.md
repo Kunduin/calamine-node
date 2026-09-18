@@ -4,12 +4,17 @@
 
 Build a small, reliable, read-only Calamine package for Node.js and Bun. Keep the
 public TypeScript API focused on workbook capabilities. Ordinary callers use
-`readWorkbook` or `readSheet` to get complete JS data with automatic resource cleanup;
-advanced callers use handles or batch iteration. All paths share the same flat sheet
-result shape and cell semantics. A workbook-wide cell budget is aggregate, not per
-sheet. Keep cloud SDKs, HTTP clients, Aliyun OSS credentials, business ingestion
-logic, and database writes outside the package. A storage SDK supplies a byte stream
-to the reader.
+`read(input, options)` to get complete JS data with automatic resource cleanup.
+Its `sheets` option accepts names, zero-based indices, or lists; omitting it reads
+all worksheets. Always return a workbook result with a `sheets` array, including for
+a single selection. Strings are literal sheet names; avoid wildcard sentinels.
+Keep one complete-read entry point instead of aliases with overlapping semantics.
+Advanced callers use handles or batch iteration. All paths share the same flat sheet
+result shape and cell semantics. Preserve readable metadata and matrix rows; optimize
+per-cell costs before shortening field names. A workbook-wide cell budget is
+aggregate, not per sheet. Keep cloud SDKs, HTTP clients, Aliyun OSS credentials,
+business ingestion logic, and database writes outside the package. A storage SDK
+supplies a byte stream to the reader.
 
 ## Toolchain
 

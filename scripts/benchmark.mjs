@@ -1,7 +1,7 @@
 import { performance } from 'node:perf_hooks';
 import { stat, readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { openFile, readSheet, readWorkbook } from '../dist/index.js';
+import { openFile, read } from '../dist/index.js';
 import native from '../native/binding.cjs';
 const require = createRequire(import.meta.url);
 const mode = process.argv[3];
@@ -26,8 +26,8 @@ if (mode === 'stringify' || mode === 'parse-json') {
   if (mode === 'parse-json') jsonRows = JSON.stringify(jsonRows);
 }
 async function operation() {
-  if (mode === 'complete-sheet') return (await readSheet(path)).rowCount;
-  if (mode === 'complete-workbook') return (await readWorkbook(path)).sheets[0].rowCount;
+  if (mode === 'complete-sheet') return (await read(path, { sheets: 0 })).sheets[0].rowCount;
+  if (mode === 'complete-workbook') return (await read(path)).sheets[0].rowCount;
   if (mode === 'stringify') return Buffer.byteLength(JSON.stringify(jsonRows));
   if (mode === 'parse-json') return JSON.parse(jsonRows).length;
   if (mode === 'sheetjs') {

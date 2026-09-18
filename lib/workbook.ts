@@ -7,9 +7,16 @@ import type {
   VbaProject,
 } from '../native/binding.cjs';
 import { SpreadsheetError, integer } from './errors.js';
-import { collectionBatchSize, readOptions } from './options.js';
+import { collectionBatchSize, normalizeSheetOptions } from './options.js';
 import type { Gate } from './gate.js';
-import type { Workbook, SheetResult, RowBatch, ReadOptions, Row, VbaOptions } from './types.js';
+import type {
+  Workbook,
+  SheetResult,
+  RowBatch,
+  SheetReadOptions,
+  Row,
+  VbaOptions,
+} from './types.js';
 
 function metadata(info: RangeInfo, sheet: Readonly<SheetInfo>): Omit<SheetResult, 'rows'> {
   return {
@@ -53,7 +60,7 @@ export class WorkbookHandle implements Workbook {
 
   async *readBatches(
     selector: string | number = 0,
-    options: ReadOptions = {},
+    options: SheetReadOptions = {},
   ): AsyncGenerator<RowBatch> {
     this.#assertOpen();
     options.signal?.throwIfAborted();
@@ -110,10 +117,13 @@ export class WorkbookHandle implements Workbook {
     }
   }
 
-  async readSheet(selector: string | number = 0, options: ReadOptions = {}): Promise<SheetResult> {
+  async readSheet(
+    selector: string | number = 0,
+    options: SheetReadOptions = {},
+  ): Promise<SheetResult> {
     const rows: Row[] = [];
     let result: SheetResult | undefined;
-    const reading = readOptions(options, this.maxCells, collectionBatchSize);
+    const reading = normalizeSheetOptions(options, this.maxCells, collectionBatchSize);
     for await (const batch of this.readBatches(selector, reading)) {
       result ??= {
         name: batch.name,

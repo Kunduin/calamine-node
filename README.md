@@ -51,54 +51,71 @@ See [development and packaging](docs/development.md) for platform and release de
 ## Read complete JavaScript data
 
 A **workbook** is an Excel file. A **sheet** is one tab inside that workbook.
-Choose the entry point that matches the data you need:
+Use `read` for complete data, selecting one, several, or all worksheets:
 
 ```ts
-import { readWorkbook, readSheet } from 'calamine-node';
+import { read } from 'calamine-node';
 
-const workbook = await readWorkbook('/data/report.xlsx');
+const workbook = await read('/data/report.xlsx');
 console.log(workbook.format, workbook.definedNames);
 for (const sheet of workbook.sheets) {
   console.log(sheet.name, sheet.origin, sheet.rows);
 }
 
-const sheet = await readSheet('/data/report.xlsx', { sheet: 'Sales' });
-console.log(sheet.name, sheet.rows);
+const selected = await read('/data/report.xlsx', { sheets: 'Sales' });
+console.log(selected.sheets[0]?.rows);
+
+await read('/data/report.xlsx', { sheets: 0 }); // First sheet, using its zero-based index.
+await read('/data/report.xlsx', { sheets: ['Sales', 'Forecast'] });
 ```
 
-Both return ordinary JavaScript objects and arrays, without native handles or a
-`close()` obligation. Resources are closed before the Promise resolves or rejects.
-They accept a local path, file URL, `Uint8Array`/`Buffer`, Node/Web byte stream, or
+`read` always returns a workbook result containing a `sheets` array, even when only
+one sheet is selected. It returns ordinary JavaScript objects and arrays, without
+native handles or a `close()` obligation. Resources are closed before the Promise
+resolves or rejects.
+It accepts a local path, file URL, `Uint8Array`/`Buffer`, Node/Web byte stream, or
 asynchronous byte iterable. Strings are file paths; remote downloads are supplied
 by the caller as bytes or a stream.
 
-The result of `readSheet` has this shape, which is also used by each entry of
-`readWorkbook(...).sheets` and the advanced workbook handle's `readSheet` method:
+The result has this shape. The advanced workbook handle's `readSheet` method returns
+one sheet object with the same fields as an entry in this `sheets` array:
 
-```ts
+```json
 {
-  name: 'Sales',
-  index: 0,
-  kind: 'worksheet',
-  visibility: 'visible',
-  origin: { row: 0, column: 0 },
-  rowCount: 2,
-  columnCount: 2,
-  rows: [['item', 'amount'], ['apples', 42]],
+  "format": "xlsx",
+  "sheets": [
+    {
+      "name": "Sales",
+      "index": 0,
+      "kind": "worksheet",
+      "visibility": "visible",
+      "origin": { "row": 0, "column": 0 },
+      "rowCount": 2,
+      "columnCount": 2,
+      "rows": [
+        ["item", "amount"],
+        ["apples", 42]
+      ]
+    }
+  ],
+  "definedNames": []
 }
 ```
 
+`JSON.stringify(result)` produces JSON text; `read` itself returns JS data.
 `rows` is a matrix of cells. The reader does not assume that the first row contains
 unique column names or silently convert rows into records keyed by headers.
 
-`readWorkbook` defaults to all **worksheets** in workbook order; it skips chart/VBA
-sheet types when selecting all. Select names or zero-based indices explicitly when
-needed. Results follow the requested order, with duplicate names/indices resolved
-to one result. `sheets: []` reads workbook metadata only, optionally including VBA.
-`readSheet` defaults to index 0.
+Omitting `sheets` reads all **worksheets** in workbook order; chart/VBA sheet types
+are skipped. A string selects one exact name, a number selects one zero-based index,
+and an array selects several sheets. Strings such as `"all"` and `"*"` are literal
+names, not special selectors. Results follow the requested order, with duplicate
+names/indices resolved to one result. Each sheet's `index` remains its original
+workbook index. Unknown names or indices reject the read. `sheets: []` returns an
+empty `sheets` array and workbook metadata, optionally including VBA.
 
 ```ts
-const workbook = await readWorkbook(input, {
+const workbook = await read(input, {
   sheets: ['Sales', 'Forecast'], // Omit for all worksheets.
   content: 'values', // Or 'formulas'; formulas are never evaluated.
   maxCells: 2_000_000, // Aggregate budget across selected sheet rectangles.
@@ -109,8 +126,8 @@ const workbook = await readWorkbook(input, {
 });
 ```
 
-`maxCells` counts cells including empty holes. For `readWorkbook` it applies across
-all selected sheets; for `readSheet` it applies to that sheet. Zero accepts empty
+`maxCells` counts cells including empty holes across all selected sheets. When one
+sheet is selected, the same budget applies to that sheet. Zero accepts empty
 ranges only. Limits are checked before JS materialization but after Calamine's
 native range allocation. `includeVba: true` adds `vbaProject` to the result, containing
 the extracted project or `null` if absent; otherwise the property is omitted.
@@ -123,8 +140,8 @@ without delivering an entire huge object graph in one JS-thread callback. The fi
 result still occupies memory proportional to all returned cells; large JSON
 serialization is a separate, synchronous JS operation.
 
-Use `createReader(configuration).readWorkbook(...)` or `.readSheet(...)` to share
-custom concurrency limits, a temporary directory, or experimental format opt-ins.
+Use `createReader(configuration).read(...)` to share custom concurrency limits,
+a temporary directory, or experimental format opt-ins.
 Per-call input and cell limits override that reader's defaults.
 
 ## Keep a workbook open for inspection or repeated reads
@@ -154,7 +171,7 @@ closed; input limits inspect its size at open time.
 Where explicit resource management syntax is supported (including the project's
 TypeScript build), `await using workbook = await openFile(path)` closes automatically.
 A discarded Promise or garbage collection is not a substitute for `close()` on a
-handle. Prefer the complete-read entry points when you do not need to manage a handle.
+handle. Prefer `read` when you do not need to manage a handle.
 
 ## Buffers and input streams
 
@@ -225,7 +242,7 @@ Each batch contains:
 
 An empty sheet yields one empty batch with zero dimensions. Leading unused rows
 and columns are represented by `origin`; they are not materialized as extra rows.
-`readSheet` collects batches and returns the same metadata and all rows, without
+`workbook.readSheet` collects batches and returns the same metadata and all rows, without
 `offset`. It therefore retains the full JavaScript result.
 
 Batching limits JS value construction and honors consumer backpressure. It does

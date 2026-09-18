@@ -1,10 +1,9 @@
 import { SpreadsheetError, integer } from './errors.js';
-import { collectionBatchSize, readOptions, sheetSelector } from './options.js';
+import { collectionBatchSize, normalizeSheetOptions, sheetSelector } from './options.js';
 import type {
   OpenOptions,
   Reader,
-  ReadSheetOptions,
-  ReadWorkbookOptions,
+  ReadOptions,
   SheetResult,
   SheetSelector,
   Workbook,
@@ -32,24 +31,25 @@ function openInput(
   return reader.openStream(input, options);
 }
 
-function snapshotSelectors(
-  selectors: ReadWorkbookOptions['sheets'],
-): readonly SheetSelector[] | 'all' {
-  if (selectors === undefined || selectors === 'all') {
-    return 'all';
+function snapshotSelectors(selectors: ReadOptions['sheets']): readonly SheetSelector[] | undefined {
+  if (selectors === undefined) {
+    return undefined;
   }
-  if (!Array.isArray(selectors)) {
-    throw new TypeError('sheets must be all or an array of names and zero-based indices');
+  if (typeof selectors === 'string' || typeof selectors === 'number') {
+    return [sheetSelector(selectors)];
+  }
+  if (Array.isArray(selectors)) {
+    return Array.from(selectors, sheetSelector);
   }
 
-  return selectors.map(sheetSelector);
+  throw new TypeError('sheets must be a name, zero-based index, or an array of these');
 }
 
 function selectedIndices(
   workbook: Workbook,
-  selectors: readonly SheetSelector[] | 'all',
+  selectors: readonly SheetSelector[] | undefined,
 ): number[] {
-  if (selectors === 'all') {
+  if (selectors === undefined) {
     return workbook.sheets
       .filter((sheet) => sheet.kind === 'worksheet')
       .map((sheet) => sheet.index);
@@ -71,39 +71,16 @@ function selectedIndices(
 }
 
 /** Reuse the handle API so cell semantics, cancellation, and native parsing stay identical. */
-export async function collectSheet(
-  reader: WorkbookOpener,
-  input: WorkbookInput,
-  options: ReadSheetOptions,
-  defaultMaxCells: number,
-): Promise<SheetResult> {
-  const signal = options.signal;
-  signal?.throwIfAborted();
-  const selector = sheetSelector(options.sheet ?? 0);
-  const reading = readOptions(options, defaultMaxCells, collectionBatchSize);
-  const workbook = await openInput(reader, input, options);
-  let result: SheetResult;
-
-  try {
-    result = await workbook.readSheet(selector, reading);
-  } finally {
-    await workbook.close();
-  }
-
-  signal?.throwIfAborted();
-  return result;
-}
-
 export async function collectWorkbook(
   reader: WorkbookOpener,
   input: WorkbookInput,
-  options: ReadWorkbookOptions,
+  options: ReadOptions,
   defaultMaxCells: number,
 ): Promise<WorkbookResult> {
   const signal = options.signal;
   signal?.throwIfAborted();
   const selectors = snapshotSelectors(options.sheets);
-  const reading = readOptions(options, defaultMaxCells, collectionBatchSize);
+  const reading = normalizeSheetOptions(options, defaultMaxCells, collectionBatchSize);
   const maxCells = integer(options.maxCells ?? defaultMaxCells, 'maxCells', 0);
   const includeVba = options.includeVba ?? false;
   if (typeof includeVba !== 'boolean') {
