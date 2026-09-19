@@ -79,10 +79,10 @@ process runs at a time; no competing build or test jobs run during measurement.
 | Bun     | 100K strings         | calamine, default 12 |         274.3 |           217.9 |              74.6 |
 | Bun     | 100K strings         | SheetJS, direct      |        2531.8 |          2523.2 |            2543.5 |
 
-Raising calamine's execution limit from one to twelve reduces numeric batch elapsed
-time by a factor of 2.90 on Node and 4.03 on Bun; string batches improve by 1.86 and
-2.26 respectively. This measures native concurrency plus JS delivery, not an
-isolated parser or thread-pool microbenchmark.
+README Speedup values compare SheetJS's direct-call elapsed time with calamine-node
+at its default concurrency: 13.3× and 14.4× on Node, 23.1× and 9.2× on Bun.
+Limit-one measurements remain in the report as additional data; they are not the
+baseline for Speedup. These results include parsing and complete JS delivery.
 
 Main-thread CPU is accumulated work, not the duration of one event-loop pause.
 The Node numeric batch uses about 815 ms on that thread across a 1,091 ms read;
@@ -102,7 +102,7 @@ faster on Bun, respectively. Native parsing also leaves the JS thread available
 for other work between result batches. It does not eliminate JS-thread costs or
 prove a universal advantage for small files, every producer, XLS, or concurrent
 customer workloads. Cell semantics outside these numeric/string fixtures differ
-between libraries; see the README and compatibility notes before migrating.
+between libraries; see the API reference and compatibility notes before migrating.
 
 Native file input avoids loading the entire compressed file into a JS Buffer.
 Batch consumption can avoid retaining all returned JS rows. Neither behavior is

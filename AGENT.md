@@ -117,6 +117,16 @@ incremental output uses `RowBatch`. Keep one canonical name per concept.
   include elapsed time, main-thread CPU, and concurrent batches in readable tables.
   State the execution model and distinguish direct SheetJS calls from a Worker pool;
   do not present accumulated CPU time as one continuous event-loop stall.
+- Keep the README concise: quick examples and measured advantages belong there;
+  detailed contracts belong in `docs/api.md`. Omit provider-specific integration
+  recipes. Label comparisons as Speedup, calculated as SheetJS elapsed time divided
+  by calamine-node elapsed time; do not mix that with internal concurrency scaling.
+- Write in a conventional library-author style: direct examples and clear contracts.
+  Keep result shape, supported inputs, common options, batching, concurrency, and
+  the public API overview in the README; do not shorten it by hiding essential usage
+  behind reference links. Remove repetition and implementation digressions instead.
+  Explain performance mechanisms briefly (Rust parsing, Tokio workers, batched JS
+  conversion); keep detailed scheduling discussion in the development guide.
 - npm artifacts contain runtime files, declarations, source-map sources, licenses,
   and the small public documentation set. Exclude agent instructions, tests, scripts,
   raw benchmark results, and development-only files from the package allowlist.
