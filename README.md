@@ -1,12 +1,27 @@
 # calamine-node
 
-Asynchronous, read-only spreadsheet parsing for Node.js and Bun, powered by
-[Calamine](https://github.com/tafia/calamine) and [napi-rs](https://napi.rs).
-Read XLSX, XLS, and XLSM from files, buffers, or byte streams into JavaScript rows.
+Unofficial Node.js and Bun bindings for [Calamine](https://github.com/tafia/calamine),
+a Rust spreadsheet reader. Built as a native Node.js addon using
+[napi-rs](https://napi.rs) and Node-API.
+
+Read XLSX, XLS, and XLSM asynchronously from files, buffers, or byte streams into
+JavaScript rows. Read-only and independently maintained from the Calamine project.
 
 [Usage](#usage) · [Performance](#performance) · [Development](#development)
 
 ## Usage
+
+### Installation
+
+```sh
+npm install calamine-node
+# or: pnpm add calamine-node
+# or: bun add calamine-node
+```
+
+Requires Node.js >=22.13 or Bun. Prebuilt native binaries are installed automatically
+on the supported platforms; a Rust toolchain is only needed to build from source.
+Keep optional dependencies enabled so your package manager installs the matching binary.
 
 Use `read` for complete data with automatic cleanup. Use `openFile`, `openBuffer`,
 or `openStream` to keep a workbook open for inspection or repeated reads.
@@ -442,5 +457,12 @@ pnpm pack:check
 ```
 
 See the [development guide](docs/development.md) for architecture, scripts, and releases.
+
+## Acknowledgements
+
+Thanks to [Tuffe](https://github.com/tafia) and the
+[Calamine contributors](https://github.com/tafia/calamine) for the excellent
+spreadsheet reader behind this package, and to the
+[napi-rs team](https://github.com/napi-rs/napi-rs) for the bindings and tooling.
 
 [MIT License](LICENSE) · [Third-party licenses](THIRD_PARTY_LICENSES.txt)
