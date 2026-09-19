@@ -22,8 +22,9 @@ for (const dependency of metadata.packages.toSorted((left, right) =>
     files.length === 0 && dependency.repository === 'https://github.com/napi-rs/napi-rs'
       ? readFileSync('node_modules/@napi-rs/cli/LICENSE', 'utf8')
       : undefined;
-  if (files.length === 0 && !napiLicense)
+  if (files.length === 0 && !napiLicense) {
     throw new Error(`Missing license files for ${dependency.name}`);
+  }
 
   sections.push(
     `\n${'='.repeat(72)}\n${dependency.name} ${dependency.version}\nLicense: ${dependency.license}\nhttps://crates.io/crates/${dependency.name}/${dependency.version}\n`,

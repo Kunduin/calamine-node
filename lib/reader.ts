@@ -7,7 +7,7 @@ import type { NativeWorkbook } from '../native/binding.cjs';
 import { SpreadsheetError, integer } from './errors.js';
 import { nativeOperation } from './native.js';
 import { spool } from './stream.js';
-import { WorkbookHandle } from './workbook.js';
+import { OpenWorkbook } from './workbook.js';
 import { collectWorkbook } from './read.js';
 import type {
   ByteStream,
@@ -15,9 +15,9 @@ import type {
   Reader,
   ReaderOptions,
   ReadOptions,
-  Workbook,
-  WorkbookInput,
-  WorkbookResult,
+  WorkbookHandle,
+  ReadInput,
+  ReadResult,
 } from './types.js';
 
 /** Create a reader with its own concurrency limit. Keep one reader per application workload. */
@@ -59,11 +59,11 @@ class WorkbookReader implements Reader {
     this.#native = new binding.NativeReader(concurrency);
   }
 
-  read(input: WorkbookInput, options: ReadOptions = {}): Promise<WorkbookResult> {
+  read(input: ReadInput, options: ReadOptions = {}): Promise<ReadResult> {
     return collectWorkbook(this, input, options, this.#maxCells);
   }
 
-  async openFile(path: string | URL, options: OpenOptions = {}): Promise<Workbook> {
+  async openFile(path: string | URL, options: OpenOptions = {}): Promise<WorkbookHandle> {
     const { signal } = options;
     signal?.throwIfAborted();
     const limit = this.#inputLimit(options);
@@ -80,7 +80,7 @@ class WorkbookReader implements Reader {
     return this.#finish(native, signal);
   }
 
-  async openBuffer(bytes: Uint8Array, options: OpenOptions = {}): Promise<Workbook> {
+  async openBuffer(bytes: Uint8Array, options: OpenOptions = {}): Promise<WorkbookHandle> {
     const { signal } = options;
     signal?.throwIfAborted();
     const limit = this.#inputLimit(options);
@@ -98,7 +98,7 @@ class WorkbookReader implements Reader {
     return this.#finish(native, signal);
   }
 
-  async openStream(source: ByteStream, options: OpenOptions = {}): Promise<Workbook> {
+  async openStream(source: ByteStream, options: OpenOptions = {}): Promise<WorkbookHandle> {
     const { signal } = options;
     signal?.throwIfAborted();
     const limit = this.#inputLimit(options);
@@ -132,7 +132,7 @@ class WorkbookReader implements Reader {
     native: NativeWorkbook,
     signal: AbortSignal | undefined,
     cleanup?: () => Promise<void>,
-  ): Promise<Workbook> {
+  ): Promise<WorkbookHandle> {
     try {
       signal?.throwIfAborted();
       const format = native.info.format;
@@ -142,7 +142,7 @@ class WorkbookReader implements Reader {
           `${format} requires an explicit experimentalFormats opt-in; see the compatibility notes`,
         );
       }
-      return new WorkbookHandle(native, this.#maxCells, cleanup);
+      return new OpenWorkbook(native, this.#maxCells, cleanup);
     } catch (error) {
       await nativeOperation(() => native.close());
       throw error;

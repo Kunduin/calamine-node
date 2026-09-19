@@ -8,7 +8,9 @@ export type { ByteStream } from './stream.js';
 export type Cell = string | number | boolean | null | SpecialValue;
 export type Row = Cell[];
 export type SheetSelector = string | number;
-export type WorkbookInput = string | URL | Uint8Array | ByteStream;
+
+/** A local path/file URL, an in-memory byte view, or a byte stream. */
+export type ReadInput = string | URL | Uint8Array | ByteStream;
 
 export interface Origin {
   readonly row: number;
@@ -53,8 +55,8 @@ export interface ReadOptions extends SheetReadOptions, OpenOptions {
   readonly maxVbaBytes?: number;
 }
 
-/** Fully materialized data. No native handle or disposal obligation remains. */
-export interface WorkbookResult {
+/** Complete data returned by read(). All native resources have already been closed. */
+export interface ReadResult {
   readonly format: string;
   readonly sheets: SheetResult[];
   readonly definedNames: readonly Readonly<DefinedName>[];
@@ -77,8 +79,8 @@ export interface VbaOptions {
   readonly maxBytes?: number;
 }
 
-/** An open workbook resource. Sheet entries are metadata; close after use. */
-export interface Workbook extends AsyncDisposable {
+/** Returned by openFile/openBuffer/openStream. Sheet entries are metadata; close after use. */
+export interface WorkbookHandle extends AsyncDisposable {
   readonly format: string;
   readonly sheets: readonly Readonly<SheetInfo>[];
   readonly definedNames: readonly Readonly<DefinedName>[];
@@ -93,8 +95,8 @@ export interface Workbook extends AsyncDisposable {
 
 export interface Reader {
   /** Read selected worksheets into ordinary data and close all resources before settling. */
-  read(input: WorkbookInput, options?: ReadOptions): Promise<WorkbookResult>;
-  openFile(path: string | URL, options?: OpenOptions): Promise<Workbook>;
-  openBuffer(bytes: Uint8Array, options?: OpenOptions): Promise<Workbook>;
-  openStream(source: ByteStream, options?: OpenOptions): Promise<Workbook>;
+  read(input: ReadInput, options?: ReadOptions): Promise<ReadResult>;
+  openFile(path: string | URL, options?: OpenOptions): Promise<WorkbookHandle>;
+  openBuffer(bytes: Uint8Array, options?: OpenOptions): Promise<WorkbookHandle>;
+  openStream(source: ByteStream, options?: OpenOptions): Promise<WorkbookHandle>;
 }

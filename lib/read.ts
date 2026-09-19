@@ -6,18 +6,18 @@ import type {
   ReadOptions,
   SheetResult,
   SheetSelector,
-  Workbook,
-  WorkbookInput,
-  WorkbookResult,
+  WorkbookHandle,
+  ReadInput,
+  ReadResult,
 } from './types.js';
 
-export type WorkbookOpener = Pick<Reader, 'openFile' | 'openBuffer' | 'openStream'>;
+type WorkbookOpener = Pick<Reader, 'openFile' | 'openBuffer' | 'openStream'>;
 
 function openInput(
   reader: WorkbookOpener,
-  input: WorkbookInput,
+  input: ReadInput,
   options: OpenOptions,
-): Promise<Workbook> {
+): Promise<WorkbookHandle> {
   if (typeof input === 'string' || input instanceof URL) {
     return reader.openFile(input, options);
   }
@@ -46,7 +46,7 @@ function snapshotSelectors(selectors: ReadOptions['sheets']): readonly SheetSele
 }
 
 function selectedIndices(
-  workbook: Workbook,
+  workbook: WorkbookHandle,
   selectors: readonly SheetSelector[] | undefined,
 ): number[] {
   if (selectors === undefined) {
@@ -73,10 +73,10 @@ function selectedIndices(
 /** Reuse the handle API so cell semantics, cancellation, and native parsing stay identical. */
 export async function collectWorkbook(
   reader: WorkbookOpener,
-  input: WorkbookInput,
+  input: ReadInput,
   options: ReadOptions,
   defaultMaxCells: number,
-): Promise<WorkbookResult> {
+): Promise<ReadResult> {
   const signal = options.signal;
   signal?.throwIfAborted();
   const selectors = snapshotSelectors(options.sheets);
@@ -88,7 +88,7 @@ export async function collectWorkbook(
   }
   const maxVbaBytes = integer(options.maxVbaBytes ?? 16 * 1024 * 1024, 'maxVbaBytes');
   const workbook = await openInput(reader, input, options);
-  let result: WorkbookResult;
+  let result: ReadResult;
 
   try {
     // Resolve every selector before decoding the first sheet; repeated names/indices

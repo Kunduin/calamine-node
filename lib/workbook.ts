@@ -11,7 +11,7 @@ import { collectionBatchSize, normalizeSheetOptions } from './options.js';
 import { nativeOperation } from './native.js';
 import type { NativeCancellation } from '../native/binding.cjs';
 import type {
-  Workbook,
+  WorkbookHandle,
   SheetResult,
   RowBatch,
   SheetReadOptions,
@@ -28,7 +28,7 @@ function metadata(info: RangeInfo, sheet: Readonly<SheetInfo>): Omit<SheetResult
   };
 }
 
-export class WorkbookHandle implements Workbook {
+export class OpenWorkbook implements WorkbookHandle {
   readonly format: string;
   readonly sheets: readonly Readonly<SheetInfo>[];
   readonly definedNames: readonly Readonly<DefinedName>[];

@@ -1,115 +1,162 @@
-import { performance } from 'node:perf_hooks';
-import { stat, readFile } from 'node:fs/promises';
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { openFile, read } from '../dist/index.js';
-import native from '../native/binding.cjs';
-const require = createRequire(import.meta.url);
-const mode = process.argv[3];
-const XLSX = mode === 'sheetjs' ? require(process.argv[4]) : undefined;
-const path = process.argv[2];
-if (!path || !mode)
-  throw new Error('Usage: node scripts/benchmark.mjs <file> <mode> [absolute SheetJS module path]');
-const inputBuffer = mode === 'complete-buffer' ? await readFile(path) : undefined;
-let jsonRows;
-let batchCalls = 0;
-const nativeBatch = native.NativeSheet.prototype.batch;
-native.NativeSheet.prototype.batch = function (...args) {
-  batchCalls++;
-  return nativeBatch.apply(this, args);
-};
-if (mode === 'stringify' || mode === 'parse-json') {
-  const book = await openFile(path);
-  try {
-    jsonRows = (await book.readSheet()).rows;
-  } finally {
-    await book.close();
-  }
-  if (mode === 'parse-json') jsonRows = JSON.stringify(jsonRows);
+import { cpus, platform, arch } from 'node:os';
+import { basename, resolve } from 'node:path';
+import { performance } from 'node:perf_hooks';
+import { setTimeout as delay } from 'node:timers/promises';
+import { parseArgs } from 'node:util';
+import { createReader } from '../dist/index.js';
+
+const { values } = parseArgs({
+  options: {
+    input: { type: 'string' },
+    engine: { type: 'string', default: 'calamine' },
+    sheetjs: { type: 'string' },
+    'input-mode': { type: 'string', default: 'buffer' },
+    requests: { type: 'string', default: '1' },
+    concurrency: { type: 'string' },
+    samples: { type: 'string', default: '5' },
+  },
+});
+
+function positiveInteger(value, name) {
+  const number = Number(value);
+  assert.ok(Number.isSafeInteger(number) && number > 0, `${name} must be a positive integer`);
+  return number;
 }
-async function operation() {
-  if (mode === 'complete-buffer') return (await read(inputBuffer)).sheets[0].rowCount;
-  if (mode === 'complete-sheet') return (await read(path, { sheets: 0 })).sheets[0].rowCount;
-  if (mode === 'complete-workbook') return (await read(path)).sheets[0].rowCount;
-  if (mode === 'stringify') return Buffer.byteLength(JSON.stringify(jsonRows));
-  if (mode === 'parse-json') return JSON.parse(jsonRows).length;
-  if (mode === 'sheetjs') {
-    const book = XLSX.read(await readFile(path), { dense: true });
-    return XLSX.utils.sheet_to_json(book.Sheets[book.SheetNames[0]], {
+
+assert.ok(values.input, '--input is required');
+assert.ok(['calamine', 'sheetjs'].includes(values.engine), '--engine must be calamine or sheetjs');
+assert.ok(['buffer', 'file'].includes(values['input-mode']), '--input-mode must be buffer or file');
+assert.ok(values.engine !== 'sheetjs' || values.sheetjs, '--sheetjs must name a SheetJS module');
+
+const requests = positiveInteger(values.requests, '--requests');
+const sampleCount = positiveInteger(values.samples, '--samples');
+const concurrency = values.concurrency
+  ? positiveInteger(values.concurrency, '--concurrency')
+  : undefined;
+const path = resolve(values.input);
+const bytes = await readFile(path);
+const reader = createReader(concurrency === undefined ? {} : { concurrency });
+const require = createRequire(import.meta.url);
+const sheetjs = values.engine === 'sheetjs' ? require(resolve(values.sheetjs)) : undefined;
+
+async function readRows() {
+  const input = values['input-mode'] === 'buffer' ? bytes : path;
+  if (!sheetjs) {
+    const result = await reader.read(input);
+    return result.sheets.map((sheet) => sheet.rows);
+  }
+
+  const workbook = sheetjs.read(typeof input === 'string' ? await readFile(input) : input, {
+    dense: true,
+  });
+  return workbook.SheetNames.map((name) =>
+    sheetjs.utils.sheet_to_json(workbook.Sheets[name], {
       header: 1,
       raw: true,
       defval: null,
-    }).length;
-  }
-  if (mode === 'parse-only' || mode === 'single-native-batch') {
-    const book = await new native.NativeReader(2).openPath(path, 64 * 1024 * 1024);
-    let sheet;
-    try {
-      sheet = await book.loadSheet(0, 2000000, false);
-      if (mode === 'parse-only') return sheet.info.rowCount;
-      return (await sheet.batch(0, sheet.info.rowCount)).rows.length;
-    } finally {
-      if (sheet) await sheet.close();
-      await book.close();
-    }
-  }
-  const book = await openFile(path);
-  try {
-    if (mode === 'read-sheet') return (await book.readSheet()).rows.length;
-    if (mode === 'read-sheet-256') return (await book.readSheet(0, { batchSize: 256 })).rows.length;
-    if (mode === 'read-sheet-512') return (await book.readSheet(0, { batchSize: 512 })).rows.length;
-    let count = 0;
-    for await (const batch of book.readBatches(0, { batchSize: 1024 })) count += batch.rows.length;
-    return count;
-  } finally {
-    await book.close();
-  }
+    }),
+  );
 }
-await operation();
+
+function readAll() {
+  return Promise.all(Array.from({ length: requests }, () => readRows()));
+}
+
+function describeRows(sheets) {
+  const hash = createHash('sha256');
+  const dimensions = sheets.map((rows) => {
+    hash.update(`${rows.length}\n`);
+    for (const row of rows) {
+      hash.update(JSON.stringify(row));
+      hash.update('\n');
+    }
+    return { rows: rows.length, columns: rows[0]?.length ?? 0 };
+  });
+  return { dimensions, sha256: hash.digest('hex') };
+}
+
+// Validate output outside the timed section. Compare this fingerprint across engines.
+const warmup = await readAll();
+const output = describeRows(warmup[0]);
+warmup.length = 0;
 const samples = [];
-for (let run = 0; run < 5; run++) {
+
+for (let index = 0; index < sampleCount; index++) {
   globalThis.gc?.();
-  await new Promise((r) => setTimeout(r, 10));
-  const heapBefore = process.memoryUsage().heapUsed;
-  batchCalls = 0;
-  let last = performance.now(),
-    delay = 0,
-    ticks = 0;
+  await delay(20);
+
+  let lastTick = performance.now();
+  let maxGapMs = 0;
   const heartbeat = setInterval(() => {
     const now = performance.now();
-    delay = Math.max(delay, now - last);
-    last = now;
-    ticks++;
+    maxGapMs = Math.max(maxGapMs, now - lastTick);
+    lastTick = now;
   }, 1);
+  const cpuStart = process.threadCpuUsage?.();
   const started = performance.now();
-  const count = await operation();
-  const elapsed = performance.now() - started;
-  const heapAfter = process.memoryUsage().heapUsed;
-  await new Promise((r) => setTimeout(r, 3));
-  clearInterval(heartbeat);
-  samples.push({
-    ms: elapsed,
-    gapMs: delay,
-    ticks,
-    heapDeltaMiB: (heapAfter - heapBefore) / 1048576,
-    count,
-    batchCalls,
-  });
+  let results;
+
+  try {
+    results = await readAll();
+    const wallMs = performance.now() - started;
+    const cpu = cpuStart === undefined ? undefined : process.threadCpuUsage(cpuStart);
+    // Let the timer observe the final synchronous span, including a blocking SheetJS read.
+    await delay(0);
+    samples.push({
+      wallMs,
+      mainThreadCpuMs: cpu === undefined ? null : (cpu.user + cpu.system) / 1000,
+      heartbeatMaxGapMs: maxGapMs,
+    });
+  } finally {
+    clearInterval(heartbeat);
+  }
+
+  for (const sheets of results) {
+    assert.deepEqual(
+      sheets.map((rows) => ({ rows: rows.length, columns: rows[0]?.length ?? 0 })),
+      output.dimensions,
+    );
+  }
+  results.length = 0;
 }
+
 function median(key) {
-  return samples.map((s) => s[key]).toSorted((a, b) => a - b)[2];
+  const sorted = samples.map((sample) => sample[key]).toSorted((left, right) => left - right);
+  return sorted[Math.floor(sorted.length / 2)];
 }
+
 console.log(
-  JSON.stringify({
-    runtime: process.versions.bun ? `Bun ${process.versions.bun}` : process.version,
-    input: path.split('/').pop(),
-    inputBytes: (await stat(path)).size,
-    mode,
-    p50Ms: median('ms'),
-    p50GapMs: median('gapMs'),
-    maxGapMs: Math.max(...samples.map((s) => s.gapMs)),
-    p50HeapDeltaMiB: median('heapDeltaMiB'),
-    peakRssMiB: process.resourceUsage().maxRSS / 1024,
-    count: samples[0].count,
-    batchCalls: samples[0].batchCalls,
-  }),
+  JSON.stringify(
+    {
+      runtime: process.versions.bun ? `Bun ${process.versions.bun}` : `Node ${process.version}`,
+      host: {
+        platform: platform(),
+        arch: arch(),
+        cpu: cpus()[0]?.model,
+        logicalCpus: cpus().length,
+      },
+      engine: values.engine,
+      sheetjsVersion: sheetjs?.version,
+      input: basename(path),
+      inputBytes: bytes.length,
+      inputSha256: createHash('sha256').update(bytes).digest('hex'),
+      inputMode: values['input-mode'],
+      requests,
+      concurrency: concurrency ?? 'runtime-default',
+      output,
+      forcedGc: typeof globalThis.gc === 'function',
+      medians: {
+        wallMs: median('wallMs'),
+        mainThreadCpuMs: median('mainThreadCpuMs'),
+        heartbeatMaxGapMs: median('heartbeatMaxGapMs'),
+      },
+      samples,
+    },
+    null,
+    2,
+  ),
 );

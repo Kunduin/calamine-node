@@ -1,9 +1,9 @@
 # Compatibility and known limits
 
-The initial implementation locks Calamine 0.36.1. Local runtime checks cover
-Node 22.23.2 and Bun 1.4.1 on Linux x64 GNU, plus Node 22.23.2 on Alpine 3.22 x64
-(musl). Other configured targets require matching runtime validation before a
-release claims support for them. See [platform verification](platforms.md).
+The implementation locks Calamine 0.36.1. Current local runtime checks cover
+Node 22 and Bun 1.4 on Linux x64 GNU. Other configured targets require matching
+runtime validation before a release claims support for them. See
+[platform verification](platforms.md).
 
 ## Format status
 
@@ -21,7 +21,7 @@ release claims support for them. See [platform verification](platforms.md).
 
 ## Reproduced interoperability gaps
 
-`scripts/generate-fixtures.cjs` generates documents using SheetJS 0.20.3. With the
+`scripts/generate-fixtures.mjs` generates documents using SheetJS 0.20.3. With the
 current Calamine release:
 
 1. In `cells.xlsb`, expected first-row values are `['中文', 42, true, '']`;

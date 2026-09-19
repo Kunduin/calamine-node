@@ -1,81 +1,9 @@
-# Development and packaging
+# Development
 
-## Layout
+## Build and verify
 
-- `src/source.rs`: Calamine input types and delegation to upstream readers.
-- `src/cell.rs`: explicit cell-value conversion, including dates/errors/large integers.
-- `src/reader.rs`: native inputs and one-copy byte snapshots.
-- `src/executor.rs`, `src/cancellation.rs`: bounded Tokio scheduling and owned cancellation state.
-- `src/stream.rs`: a stream's native permit, transferred from JS spooling to parsing.
-- `src/workbook.rs`, `src/sheet.rs`, `src/vba.rs`: owned resources and Calamine operations.
-- `lib/reader.ts`: validated input entry points and concurrency configuration.
-- `lib/read.ts`: sheet selection and complete workbook collection with automatic cleanup and aggregate limits.
-- `lib/options.ts`: shared option validation and collection defaults.
-- `lib/workbook.ts`: public lifetime and iteration behavior.
-- `lib/native.ts`: AbortSignal/error adaptation at the native boundary.
-- `lib/stream.ts`: backpressured temporary input spooling.
-- `native/`: generated napi-rs loader/declarations and local compiled binaries.
-- `test/`: portable node:test suites and attributed fixtures.
-
-Read [the API review](api-review.md) before expanding the public surface. It separates
-current implementation from proposed improvements and inventories existing Calamine
-capabilities to avoid duplicating upstream functionality.
-
-Remote downloads remain an application concern. Pass a storage SDK's Buffer to
-`read`, download directly to a local file and pass its path, or use the existing
-generic stream input. Local file reading remains a native capability. The
-[native dependency size comparison](benchmarks/native-size-2026-09-19.md) informed
-the decision to defer HTTP/S3/OSS clients; its isolated probes are not part of the
-published API or the project's dependencies.
-
-## Native ownership and scheduling
-
-The exported `NativeReader` is internal to the facade. Byte views are borrowed only
-for the calling JS thread's synchronous entry and copied directly into an `Arc<[u8]>`. Calamine's
-automatic format attempts clone an Arc-backed cursor, not the full input. Paths
-are opened on a blocking worker without a preliminary JS file read.
-
-`AsyncBlockBuilder` connects a Rust future to a JS Promise while preserving that
-synchronous entry phase. The future awaits a reader semaphore, then uses Tokio's
-`spawn_blocking` for synchronous Calamine work. Parsing does not run on Tokio's
-async scheduler threads or libuv's shared worker pool. The runtime belongs to
-napi-rs; creating a reader adds one semaphore, not another runtime or thread pool.
-When `concurrency` is omitted, the native constructor enters that runtime and reads
-`Handle::current().metrics().num_workers()`. This reuses Tokio's actual CPU/environment
-configuration without reimplementing it in JS or Rust. `TOKIO_WORKER_THREADS` is
-therefore honored at runtime initialization. Explicit reader limits remain supported;
-the blocking pool's separate maximum is not used as the parser's default concurrency.
-
-A stream acquires the same concurrency permit before the facade pulls input. JS adapts Node/Web/iterable streams and awaits each temporary-file
-write. Its permit moves into the native open operation without competing for a
-second slot. Spooling therefore holds bounded capacity without blocking a native
-thread. The native layer has no network client.
-
-A small owned watch channel carries cancellation into Rust. The JS bridge removes
-its AbortSignal listener when the native Promise settles and preserves the original
-abort reason. Waiting tasks can exit promptly; a running Calamine call retains its
-permits until it actually finishes. Returned handles are adopted and closed before
-reporting cancellation, so an abort cannot strand a range allocated during parsing.
-The native workbook also owns its active sheet range, allowing explicit close to
-release a paused iterator. Explicit cleanup waits for an execution slot and cannot be cancelled.
-Extra work queues automatically with no queue-length option or queue-full error.
-The executor has one semaphore for running work; no second admission quota exists.
-Queued Buffer snapshots still occupy memory, while queued paths do not open files
-and queued streams are not pulled until they obtain a permit.
-
-JS must still build JS values on its own thread. Rust prepares owned batch values;
-napi-rs creates arrays and strings on delivery. Complete reads collect bounded
-batches through the same path as handle iteration. No intermediate native JSON
-serialization or JavaScript JSON parsing is added.
-
-The [local scheduling comparison](benchmarks/native-scheduling-2026-09-19.md)
-records complete-read timings, binary size, and validation of this implementation.
-The [concurrency follow-up](benchmarks/concurrency-2026-09-19.md) separates main-thread
-CPU from elapsed time and records the switch to a runtime-derived default limit.
-The [Rayon experiment](benchmarks/rayon-2026-09-19.md) compares the CPU executor at
-matched concurrency and records why Tokio remains the shipping implementation.
-
-## Checks
+Use the versions pinned in `package.json` and `Cargo.lock`, a stable Rust toolchain,
+and Bun for runtime compatibility tests.
 
 ```sh
 pnpm install --frozen-lockfile
@@ -86,88 +14,103 @@ pnpm pack:check
 
 `check` runs oxfmt, cargo fmt, oxlint, Clippy with warnings denied, strict TypeScript
 checks, Rust tests, and the same compiled integration tests under Node and Bun.
-`pack:check` is currently a POSIX development/CI script. It packs the local binary,
-installs the tarball offline into a temporary project, and verifies package imports
-and native loading with both runtimes. Temporary files are removed in finally.
+`pack:check` installs a local tarball offline, checks its file allowlist, and runs
+Node, Bun, and TypeScript consumer fixtures against the installed package.
 
-Use `pnpm format` before reviewing changes. Generated native loader and declaration
-files are excluded from formatting/linting; regenerate them with `pnpm build:native`.
-Both language sources are formatted; Rust attributes stay attached to declarations.
+Use `pnpm format` before reviewing changes. The native loader and declarations are
+generated by napi-rs; regenerate them with `pnpm build:native` instead of editing
+or formatting them manually. The repository's `AGENT.md` records development conventions.
 
-The package uses Node-API 8. Stable TypeScript 7 builds ESM JS and declarations;
-CommonJS import behavior is not part of the initial public compatibility contract.
-Rust's `dyn-symbols` feature allows pure Rust unit tests to link without a Node host;
-the real Node-API boundary is validated by Node and Bun integration tests. Complete
-reads and handle reads use the same sheet result shape: metadata is directly
-available as `sheet.name`, `sheet.index`, `sheet.kind` and `sheet.visibility`.
-`read(input, options)` always returns `WorkbookResult`; selecting one sheet changes
-the contents of `result.sheets`, not the return type. `ReadOptions` configures complete
-reads, while `SheetReadOptions` configures a handle's `readSheet` and `readBatches`.
+## Implementation
 
-## Platform builds
+| Area                                            | Responsibility                                               |
+| ----------------------------------------------- | ------------------------------------------------------------ |
+| `src/source.rs`                                 | Calamine readers and shared, immutable input ownership       |
+| `src/reader.rs`, `src/executor.rs`              | Input snapshots and bounded native execution                 |
+| `src/cancellation.rs`, `src/stream.rs`          | Cancellation and stream execution permits                    |
+| `src/workbook.rs`, `src/sheet.rs`, `src/vba.rs` | Resource ownership and upstream operations                   |
+| `src/cell.rs`                                   | Cell values, dates, errors, and large integers               |
+| `lib/reader.ts`, `lib/read.ts`                  | Input validation, sheet selection, and complete reads        |
+| `lib/workbook.ts`, `lib/options.ts`             | Handle lifetime, iteration, and read options                 |
+| `lib/native.ts`, `lib/stream.ts`                | AbortSignal adaptation and temporary-file spooling           |
+| `lib/types.ts`                                  | Public API types                                             |
+| `test/`                                         | Runtime tests and attributed fixtures                        |
+| `scripts/`                                      | Packaging checks, benchmarks, fixture and license generation |
 
-The napi-rs scaffold configuration lists:
+`read` accepts `ReadInput` and `ReadOptions`, returning `ReadResult`. Opening a file,
+Buffer, or stream returns `WorkbookHandle`, which must be closed. Complete reads
+and handle reads share `SheetResult`; batch iteration adds an offset in `RowBatch`.
+Keep those paths on the same parser and conversion implementation.
 
-- Linux x64/arm64, GNU and musl.
-- macOS x64/arm64.
-- Windows x64/arm64, MSVC.
+## Native execution and ownership
 
-The workflow builds and tests Node 22 on every target, using matching CPU architectures
-and Alpine containers for musl. Bun tests cover Linux GNU x64 and ARM64; the quality
-job checks packed installs. Node 24/26 tests reuse the build artifacts on Linux GNU
-x64, macOS ARM64 and Windows x64 without recompiling. CI is configured but has not
-been run remotely for this new repository. See [platform verification and costs](platforms.md)
-for local results, tooling, runner choices and billing assumptions.
+napi-rs owns the shared Tokio runtime. A reader adds one semaphore, with executing
+concurrency defaulting to the runtime's actual worker count. Extra work waits
+asynchronously; there is no queue-length quota. An explicit reader limit changes
+its semaphore without creating another runtime or resizing the shared pool.
 
-There is deliberately no automatic publish job. Building an artifact is not proof
-that it works on its target host.
+`AsyncBlockBuilder` preserves a synchronous entry phase for byte snapshots, then
+connects a Rust future to a JS Promise. Byte views are borrowed only during that
+entry and copied once into `Arc<[u8]>`. Calamine's format-detection attempts clone
+an Arc-backed cursor instead of copying the entire input. Paths open on a blocking
+worker without a preliminary JS file read.
 
-## Preparing a future release
+After obtaining a permit, parsing, batch preparation, and explicit cleanup use
+`spawn_blocking`. They run outside Tokio's async workers and libuv's shared pool.
+JS arrays and strings are still constructed on the JS thread in bounded batches.
+Complete reads collect those batches without a JSON serialization round trip.
 
-1. Finalize the public API, package ownership/name, repository URL and supported target set.
-2. Pass all checks, including current compatibility notes and representative producer workbooks.
-3. Build and test every target being advertised, then collect all `.node` artifacts under `native/`.
-4. Run the official CLI's `pnpm exec napi create-npm-dirs` to generate platform packages.
-5. Use `pnpm artifacts` to copy collected artifacts into those platform packages.
-6. Review `pnpm exec napi prepublish --dry-run` and the generated optional dependencies.
-   The non-dry-run prepublish command can publish platform packages; it is a release
-   action, not a normal build/check command.
-7. Verify release tarballs and clean installs for every supported target before publishing
-   platform packages and then the main package with provenance.
+A stream obtains a permit before JS pulls input. The adapter writes each chunk to
+a private temporary file before pulling the next. It transfers the same permit to
+native parsing after download. Storage SDKs, authentication, and networking stay
+outside the package.
 
-The local tarball bundles the current host's binary. It is a smoke-test artifact,
-not a complete cross-platform release. No remote repository or npm package was
-created by initialization.
+Cancellation uses an owned watch channel. The JS adapter removes listeners and
+preserves the caller's abort reason. Queued tasks can exit promptly; a running
+Calamine call retains its permit until it finishes. Cleanup closes newly returned
+resources before reporting cancellation. A workbook also owns its active sheet,
+so closing it releases a paused iterator's range. Cleanup itself cannot be cancelled.
 
-## Reproduce performance measurements
+Concurrency bounds executing operations, not all resident inputs or open handles.
+Queued Buffers retain snapshots, and complete results remain live while the caller
+retains them. Batch output does not make Calamine's worksheet allocation streaming.
+See the README for limits and cancellation semantics.
 
-Only use local synthetic or explicitly approved files. The helper accepts an
-explicit SheetJS installation path as an optional comparison tool; SheetJS is not
-an installed dependency of this package.
+## Maintenance scripts
 
-```sh
-node scripts/generate-benchmarks.cjs /path/to/xlsx.js /tmp
-node --expose-gc scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx complete-workbook
-node --expose-gc scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx complete-buffer
-node --expose-gc scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx complete-sheet
-node --expose-gc scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx read-sheet-256
-node --expose-gc scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx read-sheet-512
-node --expose-gc scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx read-sheet
-node --expose-gc scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx parse-only
-node --expose-gc scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx single-native-batch
-node --expose-gc scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx batches
-node --expose-gc scripts/benchmark.mjs /tmp/calamine-strings-100k.xlsx stringify
-node --expose-gc scripts/benchmark.mjs /tmp/calamine-strings-100k.xlsx parse-json
-node --expose-gc scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx sheetjs /path/to/xlsx.js
-bun scripts/benchmark.mjs /tmp/calamine-numeric-1m.xlsx read-sheet
-```
+- `pnpm benchmark --input <file>` measures complete reads. See
+  [performance](performance.md) for SheetJS comparisons and reproduction commands.
+- `node scripts/generate-benchmarks.mjs <SheetJS module> <directory>` creates
+  synthetic numeric and string workloads outside the repository.
+- `node scripts/generate-fixtures.mjs <SheetJS module>` regenerates the synthetic
+  test fixtures. Review changes against `test/fixtures/README.md`; preserve the
+  separately licensed upstream fixtures.
+- `pnpm notices` regenerates `THIRD_PARTY_LICENSES.txt` from the locked Rust
+  dependency graph. Review it whenever native dependencies change.
 
-The `complete-sheet` mode calls `read(path, { sheets: 0 })`; `complete-workbook` calls
-`read(path)`. Archived reports retain the API names used when measured.
-`complete-buffer` preloads bytes once outside the timed operation, then measures
-`read(buffer)`, including its synchronous input snapshot and automatic cleanup.
+SheetJS is an optional external benchmark/fixture tool, not a package dependency.
+Do not run performance tests against production files or services. Keep local
+measurements in `docs/performance.json` with methodology in `docs/performance.md`;
+remove superseded experiment logs instead of accumulating contradictory reports.
 
-The helper measures one warmup and five runs. Do not run competing benchmarks in
-parallel. Record hardware, runtimes, input shape, warm/cold state, first-result and
-completion times, JS heartbeat gaps and memory methodology. Compare semantically
-equivalent results, not just differently configured parsers.
+## Packaging and release
+
+The package uses Node-API 8 and TypeScript ESM output. CommonJS consumption is not
+part of the current compatibility contract. Source files accompany source and
+declaration maps so installed-package debugging and editor navigation work.
+The npm allowlist excludes tests, scripts, agent instructions, and raw benchmark data.
+
+[Platform CI](platforms.md) describes the configured target matrix. Before a release:
+
+1. Finalize the package name, ownership, repository URL, and supported targets.
+2. Pass the checks above and validate every advertised target on a matching runtime.
+3. Collect target binaries and use `pnpm exec napi create-npm-dirs` to generate
+   platform packages, followed by `pnpm artifacts`.
+4. Review `pnpm exec napi prepublish --dry-run` and the optional dependencies.
+5. Verify clean installs for every target before publishing platform packages and
+   then the main package with provenance.
+
+The non-dry-run `napi prepublish` command can publish platform packages. It is a
+release action. CI currently builds and tests only; no automatic publication is
+configured. A local tarball containing the host binary is a packaging check, not
+proof of a complete cross-platform release.

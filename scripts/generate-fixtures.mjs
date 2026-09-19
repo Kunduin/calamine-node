@@ -1,10 +1,18 @@
 // Synthetic, redistributable workbooks. No customer or production data.
-// Usage: node scripts/generate-fixtures.cjs /absolute/path/to/xlsx.js
-const { mkdirSync } = require('node:fs');
-const { join } = require('node:path');
+// Usage: node scripts/generate-fixtures.mjs /absolute/path/to/xlsx.js
+import { mkdirSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const XLSX = require(process.argv[2]);
-const output = join(__dirname, '..', 'test', 'fixtures');
+const modulePath = process.argv[2];
+if (!modulePath) {
+  throw new Error('Usage: node scripts/generate-fixtures.mjs <SheetJS module path>');
+}
+
+const require = createRequire(import.meta.url);
+const XLSX = require(resolve(modulePath));
+const output = fileURLToPath(new URL('../test/fixtures/', import.meta.url));
 mkdirSync(output, { recursive: true });
 
 for (const bookType of ['xlsx', 'biff8', 'xlsb', 'ods']) {

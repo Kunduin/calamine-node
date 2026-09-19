@@ -2,7 +2,7 @@ import { integer } from './errors.js';
 import type { SheetReadOptions, SheetSelector } from './types.js';
 
 // Keep conversion callbacks short even for long strings, while reducing native
-// calls for complete reads. WorkbookHandle also caps each batch by cell count.
+// calls for complete reads. OpenWorkbook also caps each batch by cell count.
 export const collectionBatchSize = 512;
 
 export function normalizeSheetOptions(

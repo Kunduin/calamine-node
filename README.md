@@ -10,8 +10,8 @@ automatically; workbook handles are available for advanced use.
 
 **Status:** initial development release; not yet published to npm. The current
 native scheduler has been tested locally on Linux x64 GNU with Node 22 and Bun 1.4.
-See [platform verification and CI costs](docs/platforms.md) for earlier cross-build
-results and the remaining platform runtime checks before publication.
+See [platforms and CI](docs/platforms.md) for the configured build matrix and
+remaining runtime checks before publication.
 
 ## Capabilities
 
@@ -33,10 +33,43 @@ This is a reader. It does not write spreadsheets, recalculate formulas, render
 styles, expose images/merged-cell geometry/tables, or provide a browser/WASM build.
 It does not yet expose every format-specific Calamine API.
 
+## Performance compared with SheetJS
+
+For server-side, read-only ingestion, the main benefits are faster complete reads
+on the measured workloads and native background parsing through a Promise API.
+You do not need to build a JS Worker pool to move the parser off the calling thread.
+Local paths are read directly in Rust, and batch iteration lets consumers control
+JS result delivery without collecting every returned row.
+
+Measured on Linux x64, Intel Core i5-12400, using preloaded XLSX Buffers. Each value
+is the median of five complete reads after warmup. SheetJS CE **0.20.3** uses its
+official Node package, **dense mode**, and `sheet_to_json` to produce row matrices.
+Both engines' output dimensions and row-data hashes match for these inputs.
+
+| Runtime      | Workload                  | calamine-node |  SheetJS | Speedup |
+| ------------ | ------------------------- | ------------: | -------: | ------: |
+| Node 22.23.2 | 1,000,000 numeric cells   |        327 ms | 1,454 ms |    4.4× |
+| Node 22.23.2 | 100,000 long string cells |         74 ms |   485 ms |    6.5× |
+| Bun 1.4.1    | 1,000,000 numeric cells   |        275 ms | 1,259 ms |    4.6× |
+| Bun 1.4.1    | 100,000 long string cells |         75 ms |   241 ms |    3.2× |
+
+Main-thread work also differs: the Node numeric case used about **81 ms** of
+main-thread CPU here versus **1,415 ms** for direct SheetJS parsing. The median
+per-run largest timer gap was **2.3 ms versus 1,454 ms** in that case. These are
+observations, not latency guarantees: Buffer snapshots, JS value construction,
+and garbage collection still run on the JS thread.
+
+This compares direct SheetJS calls, not a SheetJS Worker implementation;
+[SheetJS also documents worker-based processing](https://docs.sheetjs.com/docs/demos/bigdata/worker/).
+The speedups apply to these synthetic XLSX inputs, not every format or workload.
+This package is a native Node/Bun reader, with no spreadsheet-writing or browser
+API. Neither input spooling nor batch output makes native Excel decoding use
+constant memory. See [methodology and reproduction](docs/performance.md).
+
 ## Build and run locally
 
-Install a current stable Rust toolchain, Node >=22.13, pnpm 12.4.2 and Bun for the
-compatibility tests. The project uses stable TypeScript **7.0.2**, not native-preview.
+Install a stable Rust toolchain, Node >=22.13, the pnpm version pinned in
+`package.json`, and Bun for compatibility tests. TypeScript 7 builds the JS facade.
 
 ```sh
 pnpm install --frozen-lockfile
@@ -57,9 +90,9 @@ Use `read` for complete data, selecting one, several, or all worksheets:
 ```ts
 import { read } from 'calamine-node';
 
-const workbook = await read('/data/report.xlsx');
-console.log(workbook.format, workbook.definedNames);
-for (const sheet of workbook.sheets) {
+const result = await read('/data/report.xlsx');
+console.log(result.format, result.definedNames);
+for (const sheet of result.sheets) {
   console.log(sheet.name, sheet.origin, sheet.rows);
 }
 
@@ -70,7 +103,7 @@ await read('/data/report.xlsx', { sheets: 0 }); // First sheet, using its zero-b
 await read('/data/report.xlsx', { sheets: ['Sales', 'Forecast'] });
 ```
 
-`read` always returns a workbook result containing a `sheets` array, even when only
+`read` always returns a `ReadResult` containing a `sheets` array, even when only
 one sheet is selected. It returns ordinary JavaScript objects and arrays, without
 native handles or a `close()` obligation. Resources are closed before the Promise
 resolves or rejects.
@@ -116,7 +149,7 @@ workbook index. Unknown names or indices reject the read. `sheets: []` returns a
 empty `sheets` array and workbook metadata, optionally including VBA.
 
 ```ts
-const workbook = await read(input, {
+const result = await read(input, {
   sheets: ['Sales', 'Forecast'], // Omit for all worksheets.
   content: 'values', // Or 'formulas'; formulas are never evaluated.
   maxCells: 2_000_000, // Aggregate budget across selected sheet rectangles.
@@ -144,6 +177,24 @@ serialization is a separate, synchronous JS operation.
 Use `createReader(configuration).read(...)` to share custom concurrency limits,
 a temporary directory, or experimental format opt-ins.
 Per-call input and cell limits override that reader's defaults.
+
+## TypeScript API
+
+Types follow the operation or data they describe:
+
+| API                                    | Input/configuration                   | Return type                   |
+| -------------------------------------- | ------------------------------------- | ----------------------------- |
+| `read`                                 | `ReadInput`, `ReadOptions`            | `Promise<ReadResult>`         |
+| `createReader`                         | `ReaderOptions`                       | `Reader`                      |
+| `openFile`, `openBuffer`, `openStream` | Path, bytes, or stream; `OpenOptions` | `Promise<WorkbookHandle>`     |
+| `workbook.readSheet`                   | `SheetSelector`, `SheetReadOptions`   | `Promise<SheetResult>`        |
+| `workbook.readBatches`                 | `SheetSelector`, `SheetReadOptions`   | `AsyncGenerator<RowBatch>`    |
+| `workbook.readVbaProject`              | `VbaOptions`                          | `Promise<VbaProject \| null>` |
+
+`ReadResult` is ordinary data. `WorkbookHandle` owns native resources and must be
+closed; its `sheets` contain metadata until you request rows. A workbook is still
+the spreadsheet file, and a sheet is one tab. Selecting one sheet changes the
+contents of `ReadResult.sheets`, not the return type.
 
 ## Keep a workbook open for inspection or repeated reads
 
@@ -409,8 +460,8 @@ native work is not a supported cancellation mechanism, particularly on Bun.
 
 ## Development
 
-See [AGENT.md](AGENT.md) for code-quality conventions and
-[docs/development.md](docs/development.md) for tests, architecture and packaging.
+See [development](docs/development.md) for tests, architecture, maintenance scripts,
+and packaging, and [performance](docs/performance.md) for reproducible comparisons.
 All fixtures are synthetic or attributed upstream samples. Benchmarks run locally.
 
 MIT licensed; see [LICENSE](LICENSE). Third-party dependency license texts are

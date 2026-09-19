@@ -21,9 +21,8 @@
     "README.md",
     "LICENSE",
     "lib",
-    "docs",
-    "THIRD_PARTY_LICENSES.txt",
-    "AGENT.md"
+    "docs/*.md",
+    "THIRD_PARTY_LICENSES.txt"
   ],
   "type": "module",
   "main": "./dist/index.js",

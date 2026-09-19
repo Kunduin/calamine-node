@@ -17,17 +17,17 @@ business ingestion logic, and database writes outside the package. The applicati
 can use its storage SDK to supply a Buffer, download directly to a local file, or
 supply a byte stream to the reader.
 
-After the native dependency size comparison, keep the initial scope focused on
-local paths, owned byte input, and the existing generic stream adapter. Local file
-reading is explicitly supported. Defer native HTTP/S3/OSS clients and moving stream
-I/O into Rust; the experiment is not a shipping implementation. Prioritize redundant
-input-copy reduction and parsing/output costs while preserving invocation-time
-snapshots of mutable inputs. Do not add a new async runtime solely to relocate SDK
-downloads. See `docs/benchmarks/native-size-2026-09-19.md` for measured tradeoffs.
+Keep the scope focused on local paths, owned byte input, and the generic stream
+adapter. Preserve invocation-time snapshots of mutable inputs. Do not add native
+HTTP/S3/OSS clients or an async runtime solely to relocate SDK downloads.
+
+Public complete-read types are `ReadInput`, `ReadOptions`, and `ReadResult`.
+Opening a resource returns `WorkbookHandle`; sheet data uses `SheetResult`, and
+incremental output uses `RowBatch`. Keep one canonical name per concept.
 
 ## Toolchain
 
-- Start from the official latest napi-rs pnpm scaffold. Use pnpm for package management.
+- Use the official napi-rs CLI and generated bindings. Use pnpm for package management.
 - Use stable `typescript` 7; do not substitute `@typescript/native-preview`.
 - Use `oxfmt` and `oxlint` for JavaScript/TypeScript. Use `cargo fmt` and Clippy for Rust.
 - Pin direct JavaScript development dependencies. Commit pnpm and Cargo lockfiles.
@@ -110,6 +110,14 @@ downloads. See `docs/benchmarks/native-size-2026-09-19.md` for measured tradeoff
   on matching architectures and C runtimes; cross-compilation alone is not runtime validation.
 - Reuse build artifacts across Node versions, cache Rust compilation, bound job
   timeouts, and keep short artifact retention. Separate measured timings from cost estimates.
+- Keep documentation focused on current behavior. Remove superseded design reviews,
+  experiment patches, and machine-specific build logs; Git retains their history.
+  Keep one reproducible performance report supporting README comparisons.
+- npm artifacts contain runtime files, declarations, source-map sources, licenses,
+  and the small public documentation set. Exclude agent instructions, tests, scripts,
+  raw benchmark results, and development-only files from the package allowlist.
+- Maintenance scripts use ESM, validate their arguments, and avoid embedding large
+  test programs as strings. Keep optional benchmark tools outside package dependencies.
 
 ## Commits
 

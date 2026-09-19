@@ -1,7 +1,7 @@
 # Test fixture provenance
 
 `cells.xlsx`, `cells.xls`, `cells.xlsb`, `cells.ods`, and `large.xlsx` contain synthetic
-values created by `scripts/generate-fixtures.cjs`, using SheetJS 0.20.3. Regeneration
+values created by `scripts/generate-fixtures.mjs`, using SheetJS 0.20.3. Regeneration
 takes an explicit path to a SheetJS installation; SheetJS is not a package dependency.
 These generated workbooks are covered by this project's MIT license.
 
