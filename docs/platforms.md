@@ -1,9 +1,8 @@
 # Platforms and CI
 
-The current implementation is locally verified with Node 22 and Bun 1.4 on Linux
-x64 GNU. Other targets are configured for CI and require matching runtime checks
-before a release advertises support. Earlier cross-builds do not establish that the
-current scheduler works on those targets.
+All eight targets below have passed native loading and runtime tests on
+[GitHub-hosted runners](https://github.com/Kunduin/calamine-node/actions/runs/35416056809).
+Every release repeats these checks on its tagged commit.
 
 ## Target matrix
 
@@ -28,7 +27,7 @@ build configuration, not a claim of runtime verification on every distribution.
 
 Compilation and linking alone do not verify native loading, ABI compatibility,
 or runtime behavior. Do not label a platform supported based solely on a successful
-cross-build. CI has not yet been run remotely for this repository.
+cross-build.
 
 ## Workflow behavior
 
@@ -37,9 +36,13 @@ and installed npm artifacts. Build jobs test their matching operating system,
 CPU architecture, and C runtime before uploading artifacts.
 
 Rust caches are saved on `main`. Artifacts are retained for three days and reused
-by runtime-only jobs. New runs cancel older runs for the same ref. Build and
-quality jobs time out after twenty minutes; runtime-only jobs after ten minutes.
-No job publishes packages or changes versions automatically.
+by runtime-only jobs. New push and PR runs cancel older checks for the same ref;
+release runs are not cancelled by later pushes. Build and quality jobs time out
+after twenty minutes; runtime-only jobs after ten minutes.
+
+The Publish workflow calls this same CI before assembling and checking npm
+tarballs. It retains the complete release packages for 14 days. Version changes
+are reviewed through Release Please PRs; see [release instructions](development.md#routine-releases).
 
 The workflow uses standard GitHub-hosted runners. Check your repository's current
 [Actions billing settings](https://docs.github.com/en/billing/concepts/product-billing/github-actions)

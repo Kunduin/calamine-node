@@ -8,20 +8,37 @@ import { promisify } from 'node:util';
 const execute = promisify(execFile);
 const temporary = await mkdtemp(join(tmpdir(), 'calamine-package-'));
 const fixture = resolve('test/fixtures/cells.xlsx');
+const tarballs = process.argv.slice(2).map((path) => resolve(path));
 
 try {
-  await execute('pnpm', ['pack', '--pack-destination', temporary]);
-  const files = await readdir(temporary);
-  const tarball = files.find((file) => file.endsWith('.tgz'));
-  assert.ok(tarball, 'pnpm pack must produce a tarball');
+  if (tarballs.length === 0) {
+    await execute('pnpm', ['pack', '--pack-destination', temporary]);
+    const files = await readdir(temporary);
+    const tarball = files.find((file) => file.endsWith('.tgz'));
+    assert.ok(tarball, 'pnpm pack must produce a tarball');
+    tarballs.push(join(temporary, tarball));
+  }
 
   await writeFile(
     join(temporary, 'package.json'),
     JSON.stringify({ private: true, type: 'module' }),
   );
-  await execute('pnpm', ['add', '--offline', '--ignore-scripts', join(temporary, tarball)], {
-    cwd: temporary,
-  });
+  if (tarballs.length === 1) {
+    await execute('pnpm', ['add', '--offline', '--ignore-scripts', tarballs[0]], {
+      cwd: temporary,
+    });
+  } else {
+    const host = tarballs.find((path) => path.includes('-linux-x64-gnu-'));
+    const root = tarballs.find((path) => /\/calamine-node-\d/.test(path));
+    assert.ok(host && root, 'Release checks need the root and Linux x64 GNU tarballs');
+    await execute(
+      'npm',
+      ['install', '--offline', '--ignore-scripts', '--omit=optional', root, host],
+      {
+        cwd: temporary,
+      },
+    );
+  }
   const manifest = JSON.parse(
     await readFile(join(temporary, 'node_modules/calamine-node/package.json'), 'utf8'),
   );

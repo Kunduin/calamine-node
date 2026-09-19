@@ -101,17 +101,76 @@ part of the current compatibility contract. Source files accompany source and
 declaration maps so installed-package debugging and editor navigation work.
 The npm allowlist excludes tests, scripts, agent instructions, and raw benchmark data.
 
-[Platform CI](platforms.md) describes the configured target matrix. Before a release:
+### Routine releases
 
-1. Finalize the package name, ownership, repository URL, and supported targets.
-2. Pass the checks above and validate every advertised target on a matching runtime.
-3. Collect target binaries and use `pnpm exec napi create-npm-dirs` to generate
-   platform packages, followed by `pnpm artifacts`.
-4. Review `pnpm exec napi prepublish --dry-run` and the optional dependencies.
-5. Verify clean installs for every target before publishing platform packages and
-   then the main package with provenance.
+Work on `main` using Conventional Commits (`feat:`, `fix:`, `docs:`, `ci:`, and
+other appropriate types). Release Please maintains a version PR with the title
+`chore: release vX.Y.Z`, updating `package.json`, `Cargo.toml`, `Cargo.lock`, and
+`CHANGELOG.md`. No separate long-lived release branch is needed.
 
-The non-dry-run `napi prepublish` command can publish platform packages. It is a
-release action. CI currently builds and tests only; no automatic publication is
-configured. A local tarball containing the host binary is a packaging check, not
-proof of a complete cross-platform release.
+Merge that PR when ready to release. Automation creates a version tag and draft
+GitHub Release, then starts `publish.yml`. The workflow:
+
+1. Verifies the tag and package versions match.
+2. Runs the complete [platform CI](platforms.md) on the tagged commit.
+3. Packages all eight native targets with the official napi-rs tooling, then
+   checks the root and Linux platform tarballs with Node, Bun, and TypeScript.
+4. Publishes the eight platform packages before the root package using npm OIDC.
+5. Attaches the tarballs and their integrity manifest, then makes the GitHub
+   Release public.
+
+Release Please explicitly dispatches checks and publication with `GITHUB_TOKEN`;
+no personal access token is required. npm publication uses `id-token: write` and
+the `npm` GitHub environment, without a stored npm token. Public OIDC releases
+receive npm provenance automatically.
+
+For a packaging rehearsal, run **Actions → Publish → Run workflow**, select the
+version tag, and choose `prepare`. This builds and tests everything but only
+uploads the `npm-release` artifact. It does not publish npm or the GitHub Release.
+
+If publication fails partway through, use **Re-run failed jobs**. The publisher
+checks existing versions against the original tarball integrity and skips exact
+matches. Keep the original artifacts: rebuilding after partial publication can
+produce different bytes for an immutable npm version. Release artifacts are
+retained for 14 days and attached permanently when publication completes.
+
+### First publication
+
+[npm requires a package to exist](https://docs.npmjs.com/cli/v12/commands/npm-trust/)
+before configuring its trusted publisher. The first release therefore needs a
+one-time authenticated publication of the real, tested packages.
+
+Create the initial version tag and draft release, run Publish in `prepare` mode,
+then download its `npm-release` artifact into `release/`. From a checkout of that
+tag, with npm logged in to the publishing account:
+
+```sh
+node scripts/publish-release.mjs release
+node scripts/publish-release.mjs release --publish
+```
+
+The first command is a dry run. The second uploads the existing tarballs; it does
+not build locally and requires no Windows or macOS toolchain. Complete npm's 2FA
+prompts yourself. This account-authenticated bootstrap does not get the automatic
+GitHub OIDC provenance of subsequent releases.
+
+Configure a trusted publisher for **each of the nine packages**, using the names
+in `release/manifest.json`:
+
+```sh
+npm trust github <package-name> \
+  --repo Kunduin/calamine-node \
+  --file publish.yml \
+  --environment npm \
+  --allow-publish
+```
+
+In npm's web interface the equivalent fields are owner `Kunduin`, repository
+`calamine-node`, workflow `publish.yml`, environment `npm`, with permission to
+publish. Permission to stage a package alone is insufficient for this workflow.
+
+After all packages are published and trusted publishers configured, attach the
+original tarballs and manifest to the draft and publish the GitHub Release. Set
+**Settings → Secrets and variables → Actions → Variables →
+`RELEASE_AUTOMATION_ENABLED`** to `true`. Subsequent releases use the version PR
+and GitHub Actions flow above.

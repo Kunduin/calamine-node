@@ -2,7 +2,9 @@ node_modules/
 target/
 dist/
 build-test/
-native/*.node
+*.node
 npm/
+artifacts/
+release/
 *.tgz
 coverage/

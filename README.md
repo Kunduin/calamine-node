@@ -4,9 +4,6 @@ Asynchronous, read-only spreadsheet parsing for Node.js and Bun, powered by
 [Calamine](https://github.com/tafia/calamine) and [napi-rs](https://napi.rs).
 Read XLSX, XLS, and XLSM from files, buffers, or byte streams into JavaScript rows.
 
-**Status:** in development, not yet published to npm. Verified locally on Linux
-x64 GNU with Node 22 and Bun 1.4; see [platforms](docs/platforms.md).
-
 [Usage](#usage) · [Performance](#performance) · [Development](#development)
 
 ## Usage

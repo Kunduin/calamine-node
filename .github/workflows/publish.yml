@@ -1,0 +1,98 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Prepare tarballs only, or publish with npm OIDC
+        type: choice
+        options: [prepare, publish]
+        default: prepare
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  version:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Check release tag
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_REF: ${{ github.ref }}
+        run: node scripts/release-version.mjs
+
+  ci:
+    needs: version
+    uses: ./.github/workflows/CI.yml
+
+  package:
+    needs: ci
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: bindings-*
+          path: artifacts
+      - name: Prepare tested platform packages
+        run: node scripts/prepare-release.mjs artifacts release
+      - name: Install Bun
+        run: npm install --global bun@1.4.1
+      - name: Test the root and Linux platform tarballs
+        run: >-
+          node scripts/check-package.mjs
+          release/calamine-node-*.tgz
+      - uses: actions/upload-artifact@v7
+        with:
+          name: npm-release
+          path: release/
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    if: inputs.mode == 'publish'
+    needs: package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: npm
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Install npm with trusted publishing support
+        run: npm install --global npm@12.0.2
+      - uses: actions/download-artifact@v8
+        with:
+          name: npm-release
+          path: release
+      - name: Publish platform packages, then the root package
+        run: node scripts/publish-release.mjs release --publish
+      - name: Attach tarballs and publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release upload "$RELEASE_TAG" release/*.tgz release/manifest.json --clobber
+          gh release edit "$RELEASE_TAG" --draft=false

@@ -133,9 +133,19 @@ incremental output uses `RowBatch`. Keep one canonical name per concept.
   raw benchmark results, and development-only files from the package allowlist.
 - Maintenance scripts use ESM, validate their arguments, and avoid embedding large
   test programs as strings. Keep optional benchmark tools outside package dependencies.
+- Release Please maintains version PRs against `main`; do not maintain a separate
+  long-lived release branch. Keep npm, Cargo, and Cargo.lock versions aligned.
+- Release from a matching version tag. Run the full platform CI before packaging;
+  publish platform tarballs before the root package. Keep GitHub releases as drafts
+  until npm publication succeeds. Retry with the original tarballs and verify integrity.
+- Use npm Trusted Publishing from `publish.yml` and the `npm` GitHub environment.
+  Do not store an npm token in CI. New package names require a one-time authenticated
+  bootstrap before trusted publishing can be configured.
 
 ## Commits
 
-Use Conventional Commit subjects such as `feat: add asynchronous workbook reading`.
+Use Conventional Commits with a type matching the change: `feat`, `fix`, `docs`,
+`refactor`, `test`, `ci`, or `chore`. Release commits use `chore: release vX.Y.Z`;
+do not label every change as `feat`.
 Do not add Co-authored-by trailers. Do not publish npm packages or push to a remote
 unless the user has requested it.

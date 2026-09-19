@@ -5,13 +5,14 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
 
 jobs:
   quality:
@@ -34,6 +35,7 @@ jobs:
       - name: Install Bun
         run: npm install --global bun@1.4.1
       - run: pnpm install --frozen-lockfile
+      - run: node scripts/release-version.mjs
       - run: pnpm build
       - run: pnpm check
       - run: pnpm pack:check
