@@ -43,6 +43,7 @@ For a sheet named `Sales`, the result looks like this:
       "origin": { "row": 0, "column": 0 },
       "rowCount": 2,
       "columnCount": 2,
+      "mergedCells": [],
       "rows": [
         ["item", "amount"],
         ["apples", 42]
@@ -109,7 +110,7 @@ const result = await read('/data/report.xlsx', {
   sheets: ['Sales', 'Forecast'],
   content: 'values', // Use 'formulas' to read formula text.
   includeVba: true,
-  includeMergedCells: true,
+  includeMergedCells: true, // Default for XLS/XLSX; false skips merge metadata.
   maxCells: 2_000_000, // Optional cap; unlimited by default.
   maxInputBytes: 64 * 1024 * 1024,
   maxVbaBytes: 16 * 1024 * 1024,
@@ -178,7 +179,7 @@ does not replace closing a handle.
 | `rowCount`, `columnCount`             | Dimensions of the complete used rectangle                              |
 | `offset`                              | First row's zero-based offset relative to `origin`                     |
 | `rows`                                | This batch's rows, padded with `null` inside the rectangle             |
-| `mergedCells`                         | Optional absolute merged-cell ranges; present when requested           |
+| `mergedCells`                         | Absolute merged-cell ranges; included by default for XLS/XLSX          |
 
 Leading unused rows and columns are represented by `origin`, without allocating
 extra rows. An empty sheet yields one empty batch with zero dimensions. `readSheet`
@@ -201,10 +202,11 @@ Use separate workbooks for concurrent reads.
 
 ### Merged cells
 
-For XLS/XLSX, set `includeMergedCells: true` on `read`, `readSheet`, or `readBatches`.
-Each sheet then includes `mergedCells`, an array of inclusive, zero-based worksheet
+For XLS/XLSX, `read`, `readSheet`, and `readBatches` include merged-cell ranges by default.
+Each sheet includes `mergedCells`, an array of inclusive, zero-based worksheet
 ranges such as `{ start: { row: 0, column: 0 }, end: { row: 2, column: 0 } }`.
-An empty array means no merges; the field is omitted when not requested.
+An empty array means no merges. Set `includeMergedCells: false` to skip extraction
+and omit the field.
 
 The top-left cell is the anchor. Raw rows remain unchanged: covered cells are not
 filled with the anchor value, and ordinary empty cells remain distinguishable from
@@ -213,7 +215,8 @@ Merge ranges may extend beyond the value rectangle, including on an empty sheet.
 Every batch carries the same absolute ranges, even when a merge crosses batches.
 
 Calamine reads the ranges directly. XLSX requires an additional worksheet XML scan;
-XLS retains them during opening. XLSB/ODS merge requests reject with `ERR_UNSUPPORTED`.
+XLS retains them during opening. XLSB/ODS omit merge metadata by default; explicitly
+setting `includeMergedCells: true` rejects with `ERR_UNSUPPORTED` for these formats.
 `maxCells` bounds the value rectangle, not the total area covered by merge ranges.
 
 ### Cell values, dates and formulas
@@ -372,30 +375,31 @@ Calamine parses in Rust on Tokio's blocking thread pool, allowing independent
 reads to run in parallel. Results are converted into JS values in batches to limit
 the work done in each main-thread callback.
 
-**Up to 6.5× faster single reads than SheetJS in these XLSX tests.** Speedup is
+**Up to 5.3× faster single reads than SheetJS in these XLSX tests.** Speedup is
 SheetJS elapsed time divided by calamine-node elapsed time.
 
 Linux x64, i5-12400, Node 22.23.2 / Bun 1.4.1; medians of five runs after warmup.
-Both readers return matching row data from preloaded Buffers. SheetJS CE 0.20.3
-uses dense mode plus row conversion on the calling JS thread, without a Worker pool.
+Both readers return matching row data from preloaded Buffers. Merge extraction is
+enabled by default and included in these timings. SheetJS CE 0.20.3 uses dense mode
+plus row conversion on the calling JS thread, without a Worker pool.
 
 ### Single reads
 
 | Runtime | Cells per read | calamine-node |  SheetJS | Speedup |
 | ------- | -------------- | ------------: | -------: | ------: |
-| Node    | 1M numbers     |        327 ms | 1,454 ms |    4.4× |
-| Node    | 100K strings   |         74 ms |   485 ms |    6.5× |
-| Bun     | 1M numbers     |        275 ms | 1,259 ms |    4.6× |
-| Bun     | 100K strings   |         75 ms |   241 ms |    3.2× |
+| Node    | 1M numbers     |        453 ms | 1,488 ms |    3.3× |
+| Node    | 100K strings   |         94 ms |   504 ms |    5.3× |
+| Bun     | 1M numbers     |        397 ms | 1,337 ms |    3.4× |
+| Bun     | 100K strings   |         89 ms |   243 ms |    2.7× |
 
 Main-thread CPU and timer gaps, in milliseconds:
 
 | Runtime | Cells per read | calamine CPU | SheetJS CPU | calamine timer gap | SheetJS timer gap |
 | ------- | -------------- | -----------: | ----------: | -----------------: | ----------------: |
-| Node    | 1M numbers     |         80.6 |      1415.3 |                2.3 |            1453.7 |
-| Node    | 100K strings   |         22.8 |       481.2 |                2.7 |             485.9 |
-| Bun     | 1M numbers     |         28.7 |      1252.4 |                1.8 |            1269.2 |
-| Bun     | 100K strings   |         21.1 |       240.0 |                2.1 |             241.3 |
+| Node    | 1M numbers     |         81.2 |      1472.4 |                2.4 |            1490.4 |
+| Node    | 100K strings   |         22.7 |       496.0 |                2.8 |             504.4 |
+| Bun     | 1M numbers     |         27.2 |      1332.0 |                2.2 |            1348.4 |
+| Bun     | 100K strings   |         18.4 |       240.9 |                1.9 |             242.8 |
 
 CPU is accumulated main-thread work; timer gap is the median of each run's largest
 observed callback interval. These are measurements, not latency guarantees.
@@ -408,19 +412,19 @@ sequentially on the JS thread.
 
 | Runtime | Cells per read | calamine-node |  SheetJS | Speedup |
 | ------- | -------------- | ------------: | -------: | ------: |
-| Node    | 1M numbers     |       1.091 s | 14.488 s |   13.3× |
-| Node    | 100K strings   |       0.341 s |  4.918 s |   14.4× |
-| Bun     | 1M numbers     |       0.645 s | 14.899 s |   23.1× |
-| Bun     | 100K strings   |       0.274 s |  2.532 s |    9.2× |
+| Node    | 1M numbers     |       1.271 s | 14.558 s |   11.4× |
+| Node    | 100K strings   |       0.356 s |  4.920 s |   13.8× |
+| Bun     | 1M numbers     |       0.830 s | 14.641 s |   17.6× |
+| Bun     | 100K strings   |       0.281 s |  2.818 s |   10.0× |
 
 Main-thread measurements for the same batches, in milliseconds:
 
 | Runtime | Cells per read | calamine CPU | SheetJS CPU | calamine timer gap | SheetJS timer gap |
 | ------- | -------------- | -----------: | ----------: | -----------------: | ----------------: |
-| Node    | 1M numbers     |        815.2 |     14275.0 |               11.2 |           14489.1 |
-| Node    | 100K strings   |        250.3 |      4876.4 |               15.5 |            4918.8 |
-| Bun     | 1M numbers     |        257.0 |     14853.5 |               14.2 |           14909.5 |
-| Bun     | 100K strings   |        217.9 |      2523.2 |               74.6 |            2543.5 |
+| Node    | 1M numbers     |        817.6 |     14429.3 |               10.7 |           14559.0 |
+| Node    | 100K strings   |        257.6 |      4873.1 |               16.9 |            4920.8 |
+| Bun     | 1M numbers     |        255.2 |     14593.3 |               17.0 |           14652.4 |
+| Bun     | 100K strings   |        216.2 |      2809.5 |               69.3 |            2822.1 |
 
 Input snapshots and JS result construction still use the main thread. Complete
 results remain in memory until the batch finishes. Results depend on the workload;

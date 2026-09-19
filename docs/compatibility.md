@@ -54,8 +54,9 @@ hard bound on native allocation, decompression or execution time.
 
 ## Coverage boundaries
 
-Merged-cell ranges are available for XLS/XLSX through `includeMergedCells`.
-Values are not filled across merged regions. XLSB/ODS merge extraction is unsupported.
+Merged-cell ranges are included by default for XLS/XLSX; `includeMergedCells: false`
+omits them. Values are not filled across merged regions. XLSB/ODS omit merge metadata
+by default; explicitly requesting it rejects with `ERR_UNSUPPORTED`.
 
 The binding does not yet expose upstream workbook date-system flags, XLSX hyperlink
 targets, structured tables, pivot definitions/caches or feature-gated pictures.

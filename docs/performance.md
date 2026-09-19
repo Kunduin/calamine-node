@@ -18,6 +18,8 @@ on 2026-09-19. Older design experiments and build logs are retained in Git histo
   parsing, JS conversion, and automatic native cleanup are timed. SheetJS uses
   `XLSX.read(buffer, { dense: true })` followed by `sheet_to_json` with `header: 1`,
   `raw: true`, and `defval: null` for every sheet.
+- XLSX merge extraction is enabled by default. These synthetic files contain no
+  merged cells; the additional XML scan is still included in every Calamine read.
 - Warmup outputs are fingerprinted outside timing; row dimensions and SHA-256
   hashes match across engines. Each measured result's dimensions are checked.
 - The script calls `globalThis.gc` before each sample when available; Node runs
@@ -37,14 +39,14 @@ timer callbacks; it is not a worst-case latency bound.
 
 | Runtime | Input        | Engine        | Elapsed | Main-thread CPU | Largest timer gap |
 | ------- | ------------ | ------------- | ------: | --------------: | ----------------: |
-| Node    | 1M numbers   | calamine-node |   327.2 |            80.6 |               2.3 |
-| Node    | 1M numbers   | SheetJS       |  1453.5 |          1415.3 |            1453.7 |
-| Node    | 100K strings | calamine-node |    74.2 |            22.8 |               2.7 |
-| Node    | 100K strings | SheetJS       |   485.3 |           481.2 |             485.9 |
-| Bun     | 1M numbers   | calamine-node |   274.7 |            28.7 |               1.8 |
-| Bun     | 1M numbers   | SheetJS       |  1259.0 |          1252.4 |            1269.2 |
-| Bun     | 100K strings | calamine-node |    75.3 |            21.1 |               2.1 |
-| Bun     | 100K strings | SheetJS       |   241.2 |           240.0 |             241.3 |
+| Node    | 1M numbers   | calamine-node |   453.0 |            81.2 |               2.4 |
+| Node    | 1M numbers   | SheetJS       |  1488.5 |          1472.4 |            1490.4 |
+| Node    | 100K strings | calamine-node |    94.4 |            22.7 |               2.8 |
+| Node    | 100K strings | SheetJS       |   504.2 |           496.0 |             504.4 |
+| Bun     | 1M numbers   | calamine-node |   396.9 |            27.2 |               2.2 |
+| Bun     | 1M numbers   | SheetJS       |  1337.5 |          1332.0 |            1348.4 |
+| Bun     | 100K strings | calamine-node |    89.5 |            18.4 |               1.9 |
+| Bun     | 100K strings | SheetJS       |   242.7 |           240.9 |             242.8 |
 
 ## Concurrent reads: ten-request batches
 
@@ -66,38 +68,37 @@ process runs at a time; no competing build or test jobs run during measurement.
 
 | Runtime | Workload per request | Execution            | Batch elapsed | Main-thread CPU | Largest timer gap |
 | ------- | -------------------- | -------------------- | ------------: | --------------: | ----------------: |
-| Node    | 1M numbers           | calamine, limit 1    |        3166.7 |           902.2 |              19.5 |
-| Node    | 1M numbers           | calamine, default 12 |        1091.5 |           815.2 |              11.2 |
-| Node    | 1M numbers           | SheetJS, direct      |       14488.4 |         14275.0 |           14489.1 |
-| Node    | 100K strings         | calamine, limit 1    |         633.8 |           258.3 |              17.3 |
-| Node    | 100K strings         | calamine, default 12 |         341.1 |           250.3 |              15.5 |
-| Node    | 100K strings         | SheetJS, direct      |        4918.2 |          4876.4 |            4918.8 |
-| Bun     | 1M numbers           | calamine, limit 1    |        2595.9 |           321.3 |              26.1 |
-| Bun     | 1M numbers           | calamine, default 12 |         644.9 |           257.0 |              14.2 |
-| Bun     | 1M numbers           | SheetJS, direct      |       14899.0 |         14853.5 |           14909.5 |
-| Bun     | 100K strings         | calamine, limit 1    |         619.4 |           244.0 |              87.5 |
-| Bun     | 100K strings         | calamine, default 12 |         274.3 |           217.9 |              74.6 |
-| Bun     | 100K strings         | SheetJS, direct      |        2531.8 |          2523.2 |            2543.5 |
+| Node    | 1M numbers           | calamine, limit 1    |        4408.1 |           856.5 |              19.3 |
+| Node    | 1M numbers           | calamine, default 12 |        1271.5 |           817.6 |              10.7 |
+| Node    | 1M numbers           | SheetJS, direct      |       14558.1 |         14429.3 |           14559.0 |
+| Node    | 100K strings         | calamine, limit 1    |         935.5 |           377.9 |              21.8 |
+| Node    | 100K strings         | calamine, default 12 |         356.2 |           257.6 |              16.9 |
+| Node    | 100K strings         | SheetJS, direct      |        4920.2 |          4873.1 |            4920.8 |
+| Bun     | 1M numbers           | calamine, limit 1    |        3826.5 |           267.5 |              21.4 |
+| Bun     | 1M numbers           | calamine, default 12 |         829.9 |           255.2 |              17.0 |
+| Bun     | 1M numbers           | SheetJS, direct      |       14640.5 |         14593.3 |           14652.4 |
+| Bun     | 100K strings         | calamine, limit 1    |         874.4 |           319.0 |             127.5 |
+| Bun     | 100K strings         | calamine, default 12 |         281.2 |           216.2 |              69.3 |
+| Bun     | 100K strings         | SheetJS, direct      |        2817.8 |          2809.5 |            2822.1 |
 
 README Speedup values compare SheetJS's direct-call elapsed time with calamine-node
-at its default concurrency: 13.3× and 14.4× on Node, 23.1× and 9.2× on Bun.
+at its default concurrency: 11.4× and 13.8× on Node, 17.6× and 10.0× on Bun.
 Limit-one measurements remain in the report as additional data; they are not the
 baseline for Speedup. These results include parsing and complete JS delivery.
 
 Main-thread CPU is accumulated work, not the duration of one event-loop pause.
-The Node numeric batch uses about 815 ms on that thread across a 1,091 ms read;
-its median per-run largest timer gap is about 11 ms. Conversely, Bun's string batch
-finishes sooner than Node's but shows a larger timer gap (about 75 versus 15 ms).
-The measurements do not isolate the cause of that difference. Concurrency and a
-faster total read do not guarantee lower JS latency for every workload.
+Native parsing leaves the JS thread available between result batches, while input
+snapshots and result construction still use it. Concurrency and a faster total
+read do not guarantee lower JS latency for every workload.
 
 The repository's `docs/performance.json` retains all samples, fixture/output hashes,
-native and benchmark-script hashes, and the SheetJS package source/hash. That raw
-data is intentionally excluded from npm tarballs; this report remains included.
+native, JS implementation and benchmark-script hashes, and the SheetJS package
+source/hash. That raw data is intentionally excluded from npm tarballs; this report
+remains included.
 
 ## What the comparison supports
 
-The measured complete reads are 4.4× and 6.5× faster on Node, and 4.6× and 3.2×
+The measured complete reads are 3.3× and 5.3× faster on Node, and 3.4× and 2.7×
 faster on Bun, respectively. Native parsing also leaves the JS thread available
 for other work between result batches. It does not eliminate JS-thread costs or
 prove a universal advantage for small files, every producer, XLS, or concurrent

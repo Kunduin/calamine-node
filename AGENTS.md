@@ -98,6 +98,9 @@ incremental output uses `RowBatch`. Keep one canonical name per concept.
 - Use Calamine's merged-cell APIs for absolute, inclusive ranges. Preserve anchor
   values and ordinary blanks; never infer merges from empty cells or fill covered
   cells implicitly. Test offsets, empty merges and ranges crossing output batches.
+- Include XLS/XLSX merge ranges by default across complete reads, sheet reads and
+  batches; allow `includeMergedCells: false` to omit them. Unsupported formats omit
+  the field by default and reject explicit requests instead of returning an empty array.
 - Do not invent timezones or evaluate formulas or VBA.
 - A result cell limit is not a hard bound on decompression or native allocations.
 - Cell counts are unlimited by default. `maxCells: Infinity` disables an inherited

@@ -93,7 +93,7 @@ export class OpenWorkbook implements WorkbookHandle {
             sheet.index,
             limit,
             content === 'formulas',
-            includeMergedCells,
+            includeMergedCells ?? (this.format === 'xls' || this.format === 'xlsx'),
             cancellation,
           ),
         signal,

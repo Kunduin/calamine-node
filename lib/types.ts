@@ -35,7 +35,7 @@ export interface SheetResult extends Readonly<SheetInfo> {
   readonly rowCount: number;
   readonly columnCount: number;
   readonly rows: Row[];
-  /** Absolute, zero-based, inclusive ranges. Present only when requested. */
+  /** Absolute, zero-based, inclusive ranges. Included by default for XLS/XLSX. */
   readonly mergedCells?: readonly CellRange[];
 }
 
@@ -56,7 +56,7 @@ export interface SheetReadOptions {
   readonly batchSize?: number;
   /** Read cached values (default) or formula text. Formulas are never evaluated. */
   readonly content?: 'values' | 'formulas';
-  /** Include merged-cell ranges for XLS/XLSX, without filling covered cells. */
+  /** Defaults to true for XLS/XLSX. Never fills covered cells; false omits merge metadata. */
   readonly includeMergedCells?: boolean;
   /** Cell budget including holes. Infinity disables the limit; zero accepts empty ranges only. */
   readonly maxCells?: number;

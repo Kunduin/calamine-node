@@ -1,7 +1,7 @@
 {
   "date": "2026-09-19",
-  "scope": "Complete reads of synthetic XLSX files from a preloaded Buffer. Both engines return all sheets as row matrices. Fresh process per case, one warmup and five measured runs; cases run serially. SheetJS uses its official Node package entry, dense mode and sheet_to_json(header: 1, raw: true, defval: null), on the calling JS thread.",
-  "nativeSha256": "f25022052f77287e1bc053ac84c02e0cc8712292de40f9fa8900cb29ff775f24",
+  "scope": "Complete reads of synthetic XLSX files from a preloaded Buffer. Both engines return all sheets as row matrices. Fresh process per case, one warmup and five measured runs; cases run serially. SheetJS uses its official Node package entry, dense mode and sheet_to_json(header: 1, raw: true, defval: null), on the calling JS thread. Calamine includes merged-cell ranges by default.",
+  "nativeSha256": "e8a2937287c71af74374300927fdc0dfa556b6eff10ccd5696813d09c4f816ee",
   "benchmarkScriptSha256": "1da07ab5b1285bbe84ab8f08f786397c25e43c86036474b4ac8cd54c86cac249",
   "sheetjsPackageUrl": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
   "sheetjsPackageSha256": "8dc73fc3b00203e72d176e85b50938627c7b086e607c682e8d3c22c02bb99fe8",
@@ -32,35 +32,35 @@
       },
       "forcedGc": true,
       "medians": {
-        "wallMs": 327.19211500000006,
-        "mainThreadCpuMs": 80.55,
-        "heartbeatMaxGapMs": 2.2670689999999922
+        "wallMs": 453.0401979999999,
+        "mainThreadCpuMs": 81.248,
+        "heartbeatMaxGapMs": 2.350398999999925
       },
       "samples": [
         {
-          "wallMs": 335.06672299999997,
-          "mainThreadCpuMs": 85.342,
-          "heartbeatMaxGapMs": 2.2670689999999922
+          "wallMs": 453.0401979999999,
+          "mainThreadCpuMs": 84.131,
+          "heartbeatMaxGapMs": 2.198018999999931
         },
         {
-          "wallMs": 327.02560300000005,
-          "mainThreadCpuMs": 80.55,
-          "heartbeatMaxGapMs": 3.492621999999983
+          "wallMs": 447.84614899999997,
+          "mainThreadCpuMs": 81.248,
+          "heartbeatMaxGapMs": 2.3682909999999993
         },
         {
-          "wallMs": 325.7856529999999,
-          "mainThreadCpuMs": 79.59,
-          "heartbeatMaxGapMs": 2.775154000000157
+          "wallMs": 454.9308480000002,
+          "mainThreadCpuMs": 81.428,
+          "heartbeatMaxGapMs": 3.22119100000009
         },
         {
-          "wallMs": 327.19211500000006,
-          "mainThreadCpuMs": 79.95,
-          "heartbeatMaxGapMs": 2.1317730000000665
+          "wallMs": 454.6202659999999,
+          "mainThreadCpuMs": 80.702,
+          "heartbeatMaxGapMs": 2.350398999999925
         },
         {
-          "wallMs": 327.485715,
-          "mainThreadCpuMs": 81.204,
-          "heartbeatMaxGapMs": 2.0993949999997312
+          "wallMs": 451.244236,
+          "mainThreadCpuMs": 80.739,
+          "heartbeatMaxGapMs": 2.105413999999655
         }
       ]
     },
@@ -91,35 +91,35 @@
       },
       "forcedGc": true,
       "medians": {
-        "wallMs": 1453.5346229999996,
-        "mainThreadCpuMs": 1415.293,
-        "heartbeatMaxGapMs": 1453.669809
+        "wallMs": 1488.4725899999994,
+        "mainThreadCpuMs": 1472.386,
+        "heartbeatMaxGapMs": 1490.3921210000008
       },
       "samples": [
         {
-          "wallMs": 1508.666455,
-          "mainThreadCpuMs": 1493.089,
-          "heartbeatMaxGapMs": 1510.7104450000002
+          "wallMs": 1446.0643999999998,
+          "mainThreadCpuMs": 1433.823,
+          "heartbeatMaxGapMs": 1447.8580709999999
         },
         {
-          "wallMs": 1453.5346229999996,
-          "mainThreadCpuMs": 1408.05,
-          "heartbeatMaxGapMs": 1453.669809
+          "wallMs": 1475.5654950000003,
+          "mainThreadCpuMs": 1463.588,
+          "heartbeatMaxGapMs": 1475.704284
         },
         {
-          "wallMs": 1418.1293539999997,
-          "mainThreadCpuMs": 1407.311,
-          "heartbeatMaxGapMs": 1418.3557460000002
+          "wallMs": 1554.9531500000003,
+          "mainThreadCpuMs": 1541.064,
+          "heartbeatMaxGapMs": 1557.1503920000005
         },
         {
-          "wallMs": 1546.103282,
-          "mainThreadCpuMs": 1532.019,
-          "heartbeatMaxGapMs": 1548.498404
+          "wallMs": 1537.766705,
+          "mainThreadCpuMs": 1523.488,
+          "heartbeatMaxGapMs": 1537.8857600000001
         },
         {
-          "wallMs": 1426.3013340000007,
-          "mainThreadCpuMs": 1415.293,
-          "heartbeatMaxGapMs": 1426.4711469999993
+          "wallMs": 1488.4725899999994,
+          "mainThreadCpuMs": 1472.386,
+          "heartbeatMaxGapMs": 1490.3921210000008
         }
       ]
     },
@@ -149,35 +149,35 @@
       },
       "forcedGc": true,
       "medians": {
-        "wallMs": 74.1938449999999,
-        "mainThreadCpuMs": 22.837,
-        "heartbeatMaxGapMs": 2.746584999999982
+        "wallMs": 94.42120599999998,
+        "mainThreadCpuMs": 22.652,
+        "heartbeatMaxGapMs": 2.849837999999977
       },
       "samples": [
         {
-          "wallMs": 76.36597699999999,
-          "mainThreadCpuMs": 27.1,
-          "heartbeatMaxGapMs": 2.5939710000000105
+          "wallMs": 94.60511700000004,
+          "mainThreadCpuMs": 26.622,
+          "heartbeatMaxGapMs": 2.601188000000036
         },
         {
-          "wallMs": 75.79319599999997,
-          "mainThreadCpuMs": 21.175,
-          "heartbeatMaxGapMs": 3.4996949999999742
+          "wallMs": 95.35476600000004,
+          "mainThreadCpuMs": 22.652,
+          "heartbeatMaxGapMs": 3.8399749999999813
         },
         {
-          "wallMs": 74.08792400000004,
-          "mainThreadCpuMs": 23.247,
-          "heartbeatMaxGapMs": 2.6621450000000095
+          "wallMs": 94.42120599999998,
+          "mainThreadCpuMs": 22.591,
+          "heartbeatMaxGapMs": 2.849837999999977
         },
         {
-          "wallMs": 73.09423099999992,
-          "mainThreadCpuMs": 20.921,
-          "heartbeatMaxGapMs": 2.8144829999999956
+          "wallMs": 93.11554000000001,
+          "mainThreadCpuMs": 22.759,
+          "heartbeatMaxGapMs": 3.1221689999999853
         },
         {
-          "wallMs": 74.1938449999999,
-          "mainThreadCpuMs": 22.837,
-          "heartbeatMaxGapMs": 2.746584999999982
+          "wallMs": 93.58626499999991,
+          "mainThreadCpuMs": 22.576,
+          "heartbeatMaxGapMs": 2.7952670000000808
         }
       ]
     },
@@ -208,35 +208,35 @@
       },
       "forcedGc": true,
       "medians": {
-        "wallMs": 485.2721320000003,
-        "mainThreadCpuMs": 481.183,
-        "heartbeatMaxGapMs": 485.93562799999995
+        "wallMs": 504.23516699999993,
+        "mainThreadCpuMs": 495.967,
+        "heartbeatMaxGapMs": 504.41055000000006
       },
       "samples": [
         {
-          "wallMs": 473.99795500000005,
-          "mainThreadCpuMs": 468.606,
-          "heartbeatMaxGapMs": 474.1538580000001
+          "wallMs": 504.23516699999993,
+          "mainThreadCpuMs": 495.967,
+          "heartbeatMaxGapMs": 504.41055000000006
         },
         {
-          "wallMs": 500.157649,
-          "mainThreadCpuMs": 495.403,
-          "heartbeatMaxGapMs": 500.289906
+          "wallMs": 521.6418000000001,
+          "mainThreadCpuMs": 516.852,
+          "heartbeatMaxGapMs": 521.7729159999999
         },
         {
-          "wallMs": 485.2721320000003,
-          "mainThreadCpuMs": 481.183,
-          "heartbeatMaxGapMs": 485.93562799999995
+          "wallMs": 544.4036020000001,
+          "mainThreadCpuMs": 538.929,
+          "heartbeatMaxGapMs": 545.0217019999998
         },
         {
-          "wallMs": 496.22411599999987,
-          "mainThreadCpuMs": 492.252,
-          "heartbeatMaxGapMs": 496.7410530000002
+          "wallMs": 480.7427429999998,
+          "mainThreadCpuMs": 476.006,
+          "heartbeatMaxGapMs": 480.84990000000016
         },
         {
-          "wallMs": 476.04776500000025,
-          "mainThreadCpuMs": 471.813,
-          "heartbeatMaxGapMs": 476.53096800000003
+          "wallMs": 474.4871149999999,
+          "mainThreadCpuMs": 469.434,
+          "heartbeatMaxGapMs": 476.06856700000026
         }
       ]
     },
@@ -266,35 +266,35 @@
       },
       "forcedGc": false,
       "medians": {
-        "wallMs": 274.7053179999998,
-        "mainThreadCpuMs": 28.691,
-        "heartbeatMaxGapMs": 1.8047240000000784
+        "wallMs": 396.8554099999999,
+        "mainThreadCpuMs": 27.216,
+        "heartbeatMaxGapMs": 2.1858569999999986
       },
       "samples": [
         {
-          "wallMs": 292.905724,
-          "mainThreadCpuMs": 43.643,
-          "heartbeatMaxGapMs": 2.4398029999999835
+          "wallMs": 400.339958,
+          "mainThreadCpuMs": 27.216,
+          "heartbeatMaxGapMs": 2.1858569999999986
         },
         {
-          "wallMs": 279.64569700000004,
-          "mainThreadCpuMs": 31.285,
-          "heartbeatMaxGapMs": 4.54482500000006
+          "wallMs": 396.9458720000001,
+          "mainThreadCpuMs": 30.149,
+          "heartbeatMaxGapMs": 4.24308700000006
         },
         {
-          "wallMs": 273.224924,
-          "mainThreadCpuMs": 28.691,
-          "heartbeatMaxGapMs": 1.7518850000000157
+          "wallMs": 396.8554099999999,
+          "mainThreadCpuMs": 27.848,
+          "heartbeatMaxGapMs": 2.553265999999894
         },
         {
-          "wallMs": 274.7053179999998,
-          "mainThreadCpuMs": 28.241,
-          "heartbeatMaxGapMs": 1.724467999999888
+          "wallMs": 388.42546100000004,
+          "mainThreadCpuMs": 24.74,
+          "heartbeatMaxGapMs": 1.516937999999982
         },
         {
-          "wallMs": 264.32179700000006,
-          "mainThreadCpuMs": 25.912,
-          "heartbeatMaxGapMs": 1.8047240000000784
+          "wallMs": 387.331232,
+          "mainThreadCpuMs": 24.425,
+          "heartbeatMaxGapMs": 1.206938999999693
         }
       ]
     },
@@ -325,35 +325,35 @@
       },
       "forcedGc": false,
       "medians": {
-        "wallMs": 1258.992558,
-        "mainThreadCpuMs": 1252.368,
-        "heartbeatMaxGapMs": 1269.1729780000005
+        "wallMs": 1337.4848610000008,
+        "mainThreadCpuMs": 1331.964,
+        "heartbeatMaxGapMs": 1348.3642140000002
       },
       "samples": [
         {
-          "wallMs": 1214.0331109999997,
-          "mainThreadCpuMs": 1207.898,
-          "heartbeatMaxGapMs": 1218.2750000000003
+          "wallMs": 1247.3025360000001,
+          "mainThreadCpuMs": 1241.597,
+          "heartbeatMaxGapMs": 1260.954223
         },
         {
-          "wallMs": 1340.8192639999997,
-          "mainThreadCpuMs": 1334.934,
-          "heartbeatMaxGapMs": 1352.182236
+          "wallMs": 1343.928844,
+          "mainThreadCpuMs": 1337.339,
+          "heartbeatMaxGapMs": 1353.759528
         },
         {
-          "wallMs": 1282.1685350000002,
-          "mainThreadCpuMs": 1275.549,
-          "heartbeatMaxGapMs": 1292.3527490000001
+          "wallMs": 1286.8484949999997,
+          "mainThreadCpuMs": 1281.35,
+          "heartbeatMaxGapMs": 1297.393051
         },
         {
-          "wallMs": 1258.992558,
-          "mainThreadCpuMs": 1252.368,
-          "heartbeatMaxGapMs": 1269.1729780000005
+          "wallMs": 1345.1360249999998,
+          "mainThreadCpuMs": 1337.588,
+          "heartbeatMaxGapMs": 1355.1136910000005
         },
         {
-          "wallMs": 1243.09026,
-          "mainThreadCpuMs": 1236.22,
-          "heartbeatMaxGapMs": 1253.2697830000006
+          "wallMs": 1337.4848610000008,
+          "mainThreadCpuMs": 1331.964,
+          "heartbeatMaxGapMs": 1348.3642140000002
         }
       ]
     },
@@ -383,35 +383,35 @@
       },
       "forcedGc": false,
       "medians": {
-        "wallMs": 75.26140500000002,
-        "mainThreadCpuMs": 21.094,
-        "heartbeatMaxGapMs": 2.0521249999999895
+        "wallMs": 89.49511100000004,
+        "mainThreadCpuMs": 18.35,
+        "heartbeatMaxGapMs": 1.9067740000000128
       },
       "samples": [
         {
-          "wallMs": 63.905675,
-          "mainThreadCpuMs": 15.979,
-          "heartbeatMaxGapMs": 1.7817730000000154
+          "wallMs": 89.49511100000004,
+          "mainThreadCpuMs": 16.602,
+          "heartbeatMaxGapMs": 1.9067740000000128
         },
         {
-          "wallMs": 66.64682100000002,
-          "mainThreadCpuMs": 16.434,
-          "heartbeatMaxGapMs": 2.0521249999999895
+          "wallMs": 86.28757099999996,
+          "mainThreadCpuMs": 15.711,
+          "heartbeatMaxGapMs": 1.6318300000000363
         },
         {
-          "wallMs": 77.71681800000005,
-          "mainThreadCpuMs": 22.282,
-          "heartbeatMaxGapMs": 1.6275549999999726
+          "wallMs": 92.57081199999999,
+          "mainThreadCpuMs": 22.629,
+          "heartbeatMaxGapMs": 1.752143999999987
         },
         {
-          "wallMs": 75.26140500000002,
-          "mainThreadCpuMs": 21.953,
-          "heartbeatMaxGapMs": 3.669234999999958
+          "wallMs": 91.98435799999999,
+          "mainThreadCpuMs": 21.263,
+          "heartbeatMaxGapMs": 2.8655959999999823
         },
         {
-          "wallMs": 77.82656300000008,
-          "mainThreadCpuMs": 21.094,
-          "heartbeatMaxGapMs": 4.9674420000000055
+          "wallMs": 89.16302299999995,
+          "mainThreadCpuMs": 18.35,
+          "heartbeatMaxGapMs": 3.4498009999999795
         }
       ]
     },
@@ -442,35 +442,35 @@
       },
       "forcedGc": false,
       "medians": {
-        "wallMs": 241.206889,
-        "mainThreadCpuMs": 239.981,
-        "heartbeatMaxGapMs": 241.34669099999996
+        "wallMs": 242.67361299999993,
+        "mainThreadCpuMs": 240.941,
+        "heartbeatMaxGapMs": 242.76873799999998
       },
       "samples": [
         {
-          "wallMs": 241.206889,
-          "mainThreadCpuMs": 239.981,
-          "heartbeatMaxGapMs": 241.34669099999996
+          "wallMs": 248.10524800000002,
+          "mainThreadCpuMs": 245.947,
+          "heartbeatMaxGapMs": 249.120006
         },
         {
-          "wallMs": 247.2111749999999,
-          "mainThreadCpuMs": 245.711,
-          "heartbeatMaxGapMs": 247.254139
+          "wallMs": 242.72152600000004,
+          "mainThreadCpuMs": 241.727,
+          "heartbeatMaxGapMs": 242.76873799999998
         },
         {
-          "wallMs": 226.68518000000006,
-          "mainThreadCpuMs": 225.014,
-          "heartbeatMaxGapMs": 226.72652700000003
+          "wallMs": 238.279274,
+          "mainThreadCpuMs": 237.332,
+          "heartbeatMaxGapMs": 238.337268
         },
         {
-          "wallMs": 243.51673099999994,
-          "mainThreadCpuMs": 242.268,
-          "heartbeatMaxGapMs": 243.55683599999998
+          "wallMs": 238.64595899999995,
+          "mainThreadCpuMs": 238.014,
+          "heartbeatMaxGapMs": 247.14597100000015
         },
         {
-          "wallMs": 235.71874400000002,
-          "mainThreadCpuMs": 234.884,
-          "heartbeatMaxGapMs": 235.76123099999995
+          "wallMs": 242.67361299999993,
+          "mainThreadCpuMs": 240.941,
+          "heartbeatMaxGapMs": 242.71724199999994
         }
       ]
     },
@@ -500,35 +500,35 @@
       },
       "forcedGc": true,
       "medians": {
-        "wallMs": 3166.6971489999996,
-        "mainThreadCpuMs": 902.166,
-        "heartbeatMaxGapMs": 19.549395000000004
+        "wallMs": 4408.095437,
+        "mainThreadCpuMs": 856.498,
+        "heartbeatMaxGapMs": 19.311477999999624
       },
       "samples": [
         {
-          "wallMs": 3165.441564,
-          "mainThreadCpuMs": 845.858,
-          "heartbeatMaxGapMs": 17.341147000000092
+          "wallMs": 4445.660505,
+          "mainThreadCpuMs": 883.027,
+          "heartbeatMaxGapMs": 17.019768000000113
         },
         {
-          "wallMs": 3285.572083,
-          "mainThreadCpuMs": 1013.896,
-          "heartbeatMaxGapMs": 19.549395000000004
+          "wallMs": 4408.095437,
+          "mainThreadCpuMs": 856.498,
+          "heartbeatMaxGapMs": 20.20405899999969
         },
         {
-          "wallMs": 3063.083494999999,
-          "mainThreadCpuMs": 799.905,
-          "heartbeatMaxGapMs": 18.63031199999932
+          "wallMs": 4377.120010999999,
+          "mainThreadCpuMs": 840.058,
+          "heartbeatMaxGapMs": 20.47415099999853
         },
         {
-          "wallMs": 3166.6971489999996,
-          "mainThreadCpuMs": 902.166,
-          "heartbeatMaxGapMs": 20.366517999998905
+          "wallMs": 4385.3405920000005,
+          "mainThreadCpuMs": 828.675,
+          "heartbeatMaxGapMs": 18.68717800000013
         },
         {
-          "wallMs": 3280.905012000001,
-          "mainThreadCpuMs": 1019.624,
-          "heartbeatMaxGapMs": 20.98101200000019
+          "wallMs": 4494.334535000002,
+          "mainThreadCpuMs": 950.573,
+          "heartbeatMaxGapMs": 19.311477999999624
         }
       ]
     },
@@ -558,35 +558,35 @@
       },
       "forcedGc": true,
       "medians": {
-        "wallMs": 1091.4833999999998,
-        "mainThreadCpuMs": 815.192,
-        "heartbeatMaxGapMs": 11.186297000000195
+        "wallMs": 1271.4581780000008,
+        "mainThreadCpuMs": 817.551,
+        "heartbeatMaxGapMs": 10.652487999999721
       },
       "samples": [
         {
-          "wallMs": 1091.4833999999998,
-          "mainThreadCpuMs": 815.192,
-          "heartbeatMaxGapMs": 16.577555000000075
+          "wallMs": 1241.9324040000001,
+          "mainThreadCpuMs": 829.156,
+          "heartbeatMaxGapMs": 17.021199999999908
         },
         {
-          "wallMs": 1075.4818249999998,
-          "mainThreadCpuMs": 804.69,
-          "heartbeatMaxGapMs": 9.93030200000021
+          "wallMs": 1299.460657,
+          "mainThreadCpuMs": 805.655,
+          "heartbeatMaxGapMs": 9.69922600000018
         },
         {
-          "wallMs": 1080.133741,
-          "mainThreadCpuMs": 795.489,
-          "heartbeatMaxGapMs": 9.847051999999167
+          "wallMs": 1270.2531129999998,
+          "mainThreadCpuMs": 803.383,
+          "heartbeatMaxGapMs": 9.58497400000033
         },
         {
-          "wallMs": 1115.2975239999996,
-          "mainThreadCpuMs": 817.645,
-          "heartbeatMaxGapMs": 11.186297000000195
+          "wallMs": 1271.4581780000008,
+          "mainThreadCpuMs": 817.551,
+          "heartbeatMaxGapMs": 11.18808700000045
         },
         {
-          "wallMs": 1151.427761,
-          "mainThreadCpuMs": 891.862,
-          "heartbeatMaxGapMs": 14.14732400000048
+          "wallMs": 1280.2216769999995,
+          "mainThreadCpuMs": 860.491,
+          "heartbeatMaxGapMs": 10.652487999999721
         }
       ]
     },
@@ -617,35 +617,35 @@
       },
       "forcedGc": true,
       "medians": {
-        "wallMs": 14488.382730000005,
-        "mainThreadCpuMs": 14275.008,
-        "heartbeatMaxGapMs": 14489.110688
+        "wallMs": 14558.14443700001,
+        "mainThreadCpuMs": 14429.328,
+        "heartbeatMaxGapMs": 14558.950530000002
       },
       "samples": [
         {
-          "wallMs": 14406.232376,
-          "mainThreadCpuMs": 14219.027,
-          "heartbeatMaxGapMs": 14407.03413
+          "wallMs": 14333.187769999999,
+          "mainThreadCpuMs": 14214.638,
+          "heartbeatMaxGapMs": 14333.961750999999
         },
         {
-          "wallMs": 14467.456106999998,
-          "mainThreadCpuMs": 14275.008,
-          "heartbeatMaxGapMs": 14470.202225
+          "wallMs": 14695.309068999999,
+          "mainThreadCpuMs": 14564.504,
+          "heartbeatMaxGapMs": 14698.222738000004
         },
         {
-          "wallMs": 14837.181521999999,
-          "mainThreadCpuMs": 14659.397,
-          "heartbeatMaxGapMs": 14839.865439000001
+          "wallMs": 14937.931325000005,
+          "mainThreadCpuMs": 14765.989,
+          "heartbeatMaxGapMs": 14938.673451000002
         },
         {
-          "wallMs": 14488.382730000005,
-          "mainThreadCpuMs": 14260.165,
-          "heartbeatMaxGapMs": 14489.110688
+          "wallMs": 14467.003409000004,
+          "mainThreadCpuMs": 14314.594,
+          "heartbeatMaxGapMs": 14467.761779
         },
         {
-          "wallMs": 14882.641566999999,
-          "mainThreadCpuMs": 14695.807,
-          "heartbeatMaxGapMs": 14885.431820000013
+          "wallMs": 14558.14443700001,
+          "mainThreadCpuMs": 14429.328,
+          "heartbeatMaxGapMs": 14558.950530000002
         }
       ]
     },
@@ -675,35 +675,35 @@
       },
       "forcedGc": true,
       "medians": {
-        "wallMs": 633.7769920000001,
-        "mainThreadCpuMs": 258.307,
-        "heartbeatMaxGapMs": 17.280726999999843
+        "wallMs": 935.5105940000003,
+        "mainThreadCpuMs": 377.872,
+        "heartbeatMaxGapMs": 21.83266700000013
       },
       "samples": [
         {
-          "wallMs": 732.8022090000001,
-          "mainThreadCpuMs": 372.737,
-          "heartbeatMaxGapMs": 20.050345000000107
+          "wallMs": 938.9727600000001,
+          "mainThreadCpuMs": 379.949,
+          "heartbeatMaxGapMs": 20.563526999999794
         },
         {
-          "wallMs": 669.6972040000003,
-          "mainThreadCpuMs": 252.953,
-          "heartbeatMaxGapMs": 16.628178999999818
+          "wallMs": 936.2261479999997,
+          "mainThreadCpuMs": 378.668,
+          "heartbeatMaxGapMs": 21.332832999999937
         },
         {
-          "wallMs": 625.7198559999997,
-          "mainThreadCpuMs": 254.646,
-          "heartbeatMaxGapMs": 15.316674000000148
+          "wallMs": 931.33313,
+          "mainThreadCpuMs": 371.678,
+          "heartbeatMaxGapMs": 21.83266700000013
         },
         {
-          "wallMs": 631.47651,
-          "mainThreadCpuMs": 258.307,
-          "heartbeatMaxGapMs": 17.280726999999843
+          "wallMs": 930.9514169999998,
+          "mainThreadCpuMs": 375.054,
+          "heartbeatMaxGapMs": 22.52056300000004
         },
         {
-          "wallMs": 633.7769920000001,
-          "mainThreadCpuMs": 261.318,
-          "heartbeatMaxGapMs": 17.49592399999983
+          "wallMs": 935.5105940000003,
+          "mainThreadCpuMs": 377.872,
+          "heartbeatMaxGapMs": 23.44985799999995
         }
       ]
     },
@@ -733,35 +733,35 @@
       },
       "forcedGc": true,
       "medians": {
-        "wallMs": 341.115043,
-        "mainThreadCpuMs": 250.324,
-        "heartbeatMaxGapMs": 15.464848999999958
+        "wallMs": 356.211363,
+        "mainThreadCpuMs": 257.585,
+        "heartbeatMaxGapMs": 16.937497000000008
       },
       "samples": [
         {
-          "wallMs": 314.97565599999996,
-          "mainThreadCpuMs": 257.627,
-          "heartbeatMaxGapMs": 15.608761999999956
+          "wallMs": 356.211363,
+          "mainThreadCpuMs": 268.023,
+          "heartbeatMaxGapMs": 16.937497000000008
         },
         {
-          "wallMs": 356.7324910000001,
-          "mainThreadCpuMs": 242.172,
-          "heartbeatMaxGapMs": 14.382305999999971
+          "wallMs": 351.00969799999984,
+          "mainThreadCpuMs": 245.536,
+          "heartbeatMaxGapMs": 15.889337000000069
         },
         {
-          "wallMs": 335.32723899999996,
-          "mainThreadCpuMs": 250.324,
-          "heartbeatMaxGapMs": 14.142755999999963
+          "wallMs": 326.66618800000015,
+          "mainThreadCpuMs": 257.585,
+          "heartbeatMaxGapMs": 17.64013900000009
         },
         {
-          "wallMs": 344.60416399999986,
-          "mainThreadCpuMs": 261.001,
-          "heartbeatMaxGapMs": 16.833544000000074
+          "wallMs": 372.8060009999999,
+          "mainThreadCpuMs": 249.258,
+          "heartbeatMaxGapMs": 16.107338000000027
         },
         {
-          "wallMs": 341.115043,
-          "mainThreadCpuMs": 250.139,
-          "heartbeatMaxGapMs": 15.464848999999958
+          "wallMs": 365.5336219999999,
+          "mainThreadCpuMs": 262.666,
+          "heartbeatMaxGapMs": 17.26985300000024
         }
       ]
     },
@@ -792,35 +792,35 @@
       },
       "forcedGc": true,
       "medians": {
-        "wallMs": 4918.15164,
-        "mainThreadCpuMs": 4876.441,
-        "heartbeatMaxGapMs": 4918.756297
+        "wallMs": 4920.204558,
+        "mainThreadCpuMs": 4873.054,
+        "heartbeatMaxGapMs": 4920.841836
       },
       "samples": [
         {
-          "wallMs": 5025.013056,
-          "mainThreadCpuMs": 4980.595,
-          "heartbeatMaxGapMs": 5025.6280959999995
+          "wallMs": 4920.204558,
+          "mainThreadCpuMs": 4873.054,
+          "heartbeatMaxGapMs": 4920.841836
         },
         {
-          "wallMs": 5211.339764,
-          "mainThreadCpuMs": 5145.168,
-          "heartbeatMaxGapMs": 5211.915003
+          "wallMs": 4901.741185999999,
+          "mainThreadCpuMs": 4859.446,
+          "heartbeatMaxGapMs": 4902.297503
         },
         {
-          "wallMs": 4918.15164,
-          "mainThreadCpuMs": 4876.441,
-          "heartbeatMaxGapMs": 4918.756297
+          "wallMs": 5120.288796999999,
+          "mainThreadCpuMs": 5029.288,
+          "heartbeatMaxGapMs": 5120.88725
         },
         {
-          "wallMs": 4819.848173999999,
-          "mainThreadCpuMs": 4770.899,
-          "heartbeatMaxGapMs": 4820.430549000001
+          "wallMs": 4938.508045999999,
+          "mainThreadCpuMs": 4890.372,
+          "heartbeatMaxGapMs": 4939.085920999998
         },
         {
-          "wallMs": 4895.1765479999995,
-          "mainThreadCpuMs": 4818.257,
-          "heartbeatMaxGapMs": 4895.797369
+          "wallMs": 4916.348372,
+          "mainThreadCpuMs": 4850.746,
+          "heartbeatMaxGapMs": 4916.946051000003
         }
       ]
     },
@@ -850,35 +850,35 @@
       },
       "forcedGc": false,
       "medians": {
-        "wallMs": 2595.8817409999992,
-        "mainThreadCpuMs": 321.268,
-        "heartbeatMaxGapMs": 26.074150000000373
+        "wallMs": 3826.534339,
+        "mainThreadCpuMs": 267.497,
+        "heartbeatMaxGapMs": 21.369074000002
       },
       "samples": [
         {
-          "wallMs": 2674.145835,
-          "mainThreadCpuMs": 345.011,
-          "heartbeatMaxGapMs": 34.37122400000044
+          "wallMs": 3908.0894940000003,
+          "mainThreadCpuMs": 327.583,
+          "heartbeatMaxGapMs": 25.340360000000146
         },
         {
-          "wallMs": 2598.2206830000005,
-          "mainThreadCpuMs": 323.103,
-          "heartbeatMaxGapMs": 26.2802300000003
+          "wallMs": 3829.674406000001,
+          "mainThreadCpuMs": 267.497,
+          "heartbeatMaxGapMs": 21.363491000000067
         },
         {
-          "wallMs": 2595.4538969999994,
-          "mainThreadCpuMs": 319.131,
-          "heartbeatMaxGapMs": 25.47774600000048
+          "wallMs": 3795.6639969999997,
+          "mainThreadCpuMs": 263.551,
+          "heartbeatMaxGapMs": 21.699647999999797
         },
         {
-          "wallMs": 2595.8817409999992,
-          "mainThreadCpuMs": 321.268,
-          "heartbeatMaxGapMs": 26.074150000000373
+          "wallMs": 3826.534339,
+          "mainThreadCpuMs": 268.749,
+          "heartbeatMaxGapMs": 21.084599999998318
         },
         {
-          "wallMs": 2558.1890900000017,
-          "mainThreadCpuMs": 239.927,
-          "heartbeatMaxGapMs": 18.705298000000766
+          "wallMs": 3809.3350649999993,
+          "mainThreadCpuMs": 255.392,
+          "heartbeatMaxGapMs": 21.369074000002
         }
       ]
     },
@@ -908,35 +908,35 @@
       },
       "forcedGc": false,
       "medians": {
-        "wallMs": 644.9309119999999,
-        "mainThreadCpuMs": 256.987,
-        "heartbeatMaxGapMs": 14.23832399999992
+        "wallMs": 829.9111779999998,
+        "mainThreadCpuMs": 255.156,
+        "heartbeatMaxGapMs": 17.04565100000002
       },
       "samples": [
         {
-          "wallMs": 644.9309119999999,
-          "mainThreadCpuMs": 259.728,
-          "heartbeatMaxGapMs": 14.844426999999996
+          "wallMs": 832.651245,
+          "mainThreadCpuMs": 261.368,
+          "heartbeatMaxGapMs": 17.04565100000002
         },
         {
-          "wallMs": 630.342715,
-          "mainThreadCpuMs": 240.716,
-          "heartbeatMaxGapMs": 14.125087000000121
+          "wallMs": 821.8339149999999,
+          "mainThreadCpuMs": 265.306,
+          "heartbeatMaxGapMs": 17.1134669999999
         },
         {
-          "wallMs": 585.4662570000003,
-          "mainThreadCpuMs": 249.148,
-          "heartbeatMaxGapMs": 11.537310999999818
+          "wallMs": 829.9111779999998,
+          "mainThreadCpuMs": 255.156,
+          "heartbeatMaxGapMs": 10.633310000000165
         },
         {
-          "wallMs": 649.0316080000002,
-          "mainThreadCpuMs": 261.831,
-          "heartbeatMaxGapMs": 14.23832399999992
+          "wallMs": 808.5731509999996,
+          "mainThreadCpuMs": 252.797,
+          "heartbeatMaxGapMs": 11.328832000000148
         },
         {
-          "wallMs": 662.7953480000001,
-          "mainThreadCpuMs": 256.987,
-          "heartbeatMaxGapMs": 15.128707999999733
+          "wallMs": 844.6632470000004,
+          "mainThreadCpuMs": 239.434,
+          "heartbeatMaxGapMs": 19.00414600000022
         }
       ]
     },
@@ -967,35 +967,35 @@
       },
       "forcedGc": false,
       "medians": {
-        "wallMs": 14899.046684,
-        "mainThreadCpuMs": 14853.516,
-        "heartbeatMaxGapMs": 14909.549774
+        "wallMs": 14640.526840000006,
+        "mainThreadCpuMs": 14593.317,
+        "heartbeatMaxGapMs": 14652.428588999996
       },
       "samples": [
         {
-          "wallMs": 14899.046684,
-          "mainThreadCpuMs": 14853.516,
-          "heartbeatMaxGapMs": 14909.549774
+          "wallMs": 14063.66421,
+          "mainThreadCpuMs": 14019.597,
+          "heartbeatMaxGapMs": 14079.462128999998
         },
         {
-          "wallMs": 14858.903412,
-          "mainThreadCpuMs": 14808.338,
-          "heartbeatMaxGapMs": 14869.814898999997
+          "wallMs": 16045.536301,
+          "mainThreadCpuMs": 15995.068,
+          "heartbeatMaxGapMs": 16056.715576000002
         },
         {
-          "wallMs": 13920.400152000002,
-          "mainThreadCpuMs": 13870.347,
-          "heartbeatMaxGapMs": 13930.847647000002
+          "wallMs": 14640.526840000006,
+          "mainThreadCpuMs": 14593.317,
+          "heartbeatMaxGapMs": 14652.428588999996
         },
         {
-          "wallMs": 15118.376925000004,
-          "mainThreadCpuMs": 15070.325,
-          "heartbeatMaxGapMs": 15129.836159000006
+          "wallMs": 13351.524587999993,
+          "mainThreadCpuMs": 13306.104,
+          "heartbeatMaxGapMs": 13362.329442000002
         },
         {
-          "wallMs": 15278.722716999997,
-          "mainThreadCpuMs": 15226.31,
-          "heartbeatMaxGapMs": 15290.174933999995
+          "wallMs": 15234.991254000008,
+          "mainThreadCpuMs": 15189.886,
+          "heartbeatMaxGapMs": 15245.211138000013
         }
       ]
     },
@@ -1025,35 +1025,35 @@
       },
       "forcedGc": false,
       "medians": {
-        "wallMs": 619.3871690000001,
-        "mainThreadCpuMs": 244.025,
-        "heartbeatMaxGapMs": 87.465236
+        "wallMs": 874.3912809999999,
+        "mainThreadCpuMs": 318.958,
+        "heartbeatMaxGapMs": 127.46058999999968
       },
       "samples": [
         {
-          "wallMs": 698.1040380000001,
-          "mainThreadCpuMs": 321.088,
-          "heartbeatMaxGapMs": 127.49821599999996
+          "wallMs": 868.2084970000001,
+          "mainThreadCpuMs": 316.432,
+          "heartbeatMaxGapMs": 127.32924400000002
         },
         {
-          "wallMs": 629.462,
-          "mainThreadCpuMs": 218.093,
-          "heartbeatMaxGapMs": 87.465236
+          "wallMs": 874.3912809999999,
+          "mainThreadCpuMs": 317.034,
+          "heartbeatMaxGapMs": 124.20859199999995
         },
         {
-          "wallMs": 586.4606349999999,
-          "mainThreadCpuMs": 214.535,
-          "heartbeatMaxGapMs": 85.19091200000003
+          "wallMs": 874.980286,
+          "mainThreadCpuMs": 345.744,
+          "heartbeatMaxGapMs": 128.67264399999976
         },
         {
-          "wallMs": 619.3871690000001,
-          "mainThreadCpuMs": 244.025,
-          "heartbeatMaxGapMs": 88.0082080000002
+          "wallMs": 872.7987070000004,
+          "mainThreadCpuMs": 319.401,
+          "heartbeatMaxGapMs": 128.99601499999972
         },
         {
-          "wallMs": 612.5099639999999,
-          "mainThreadCpuMs": 245.488,
-          "heartbeatMaxGapMs": 86.09459599999991
+          "wallMs": 874.7515780000003,
+          "mainThreadCpuMs": 318.958,
+          "heartbeatMaxGapMs": 127.46058999999968
         }
       ]
     },
@@ -1083,35 +1083,35 @@
       },
       "forcedGc": false,
       "medians": {
-        "wallMs": 274.326413,
-        "mainThreadCpuMs": 217.902,
-        "heartbeatMaxGapMs": 74.58881099999985
+        "wallMs": 281.181961,
+        "mainThreadCpuMs": 216.197,
+        "heartbeatMaxGapMs": 69.29289199999994
       },
       "samples": [
         {
-          "wallMs": 264.451455,
-          "mainThreadCpuMs": 213.134,
-          "heartbeatMaxGapMs": 85.17043899999999
+          "wallMs": 278.50807799999995,
+          "mainThreadCpuMs": 213.691,
+          "heartbeatMaxGapMs": 71.55215399999997
         },
         {
-          "wallMs": 304.06563800000004,
-          "mainThreadCpuMs": 228.473,
-          "heartbeatMaxGapMs": 66.76028899999994
+          "wallMs": 260.728257,
+          "mainThreadCpuMs": 197.271,
+          "heartbeatMaxGapMs": 65.03805699999998
         },
         {
-          "wallMs": 238.86070500000005,
-          "mainThreadCpuMs": 157.928,
-          "heartbeatMaxGapMs": 49.74929399999996
+          "wallMs": 289.0456130000001,
+          "mainThreadCpuMs": 221.562,
+          "heartbeatMaxGapMs": 70.17422099999999
         },
         {
-          "wallMs": 274.326413,
-          "mainThreadCpuMs": 217.902,
-          "heartbeatMaxGapMs": 74.58881099999985
+          "wallMs": 309.8641829999999,
+          "mainThreadCpuMs": 223.151,
+          "heartbeatMaxGapMs": 69.07566999999995
         },
         {
-          "wallMs": 282.3486889999999,
-          "mainThreadCpuMs": 221.291,
-          "heartbeatMaxGapMs": 84.57937100000004
+          "wallMs": 281.181961,
+          "mainThreadCpuMs": 216.197,
+          "heartbeatMaxGapMs": 69.29289199999994
         }
       ]
     },
@@ -1142,35 +1142,35 @@
       },
       "forcedGc": false,
       "medians": {
-        "wallMs": 2531.7927120000004,
-        "mainThreadCpuMs": 2523.166,
-        "heartbeatMaxGapMs": 2543.5337099999997
+        "wallMs": 2817.825672000001,
+        "mainThreadCpuMs": 2809.544,
+        "heartbeatMaxGapMs": 2822.1138359999995
       },
       "samples": [
         {
-          "wallMs": 2483.280891,
-          "mainThreadCpuMs": 2471.834,
-          "heartbeatMaxGapMs": 2483.4153260000003
+          "wallMs": 2631.361687,
+          "mainThreadCpuMs": 2623.325,
+          "heartbeatMaxGapMs": 2636.4743949999997
         },
         {
-          "wallMs": 2531.7927120000004,
-          "mainThreadCpuMs": 2523.166,
-          "heartbeatMaxGapMs": 2543.5337099999997
+          "wallMs": 2684.4374989999997,
+          "mainThreadCpuMs": 2676.434,
+          "heartbeatMaxGapMs": 2688.1238970000004
         },
         {
-          "wallMs": 2622.4074040000005,
-          "mainThreadCpuMs": 2614.143,
-          "heartbeatMaxGapMs": 2634.0577359999997
+          "wallMs": 2817.825672000001,
+          "mainThreadCpuMs": 2809.544,
+          "heartbeatMaxGapMs": 2822.1138359999995
         },
         {
-          "wallMs": 2552.2743260000007,
-          "mainThreadCpuMs": 2544.701,
-          "heartbeatMaxGapMs": 2564.1223609999997
+          "wallMs": 2873.799126,
+          "mainThreadCpuMs": 2865.632,
+          "heartbeatMaxGapMs": 2878.9086799999986
         },
         {
-          "wallMs": 2512.5682159999997,
-          "mainThreadCpuMs": 2504.263,
-          "heartbeatMaxGapMs": 2522.402674000001
+          "wallMs": 2896.852841,
+          "mainThreadCpuMs": 2887.938,
+          "heartbeatMaxGapMs": 2902.1126809999987
         }
       ]
     }
@@ -1185,5 +1185,6 @@
       "TOKIO_WORKER_THREADS": "12"
     },
     "order": "Fresh process per case; cases run sequentially, calamine limit 1, calamine runtime default, then SheetJS, for each input/runtime."
-  }
+  },
+  "libraryJavaScriptSha256": "ea1985b33be71c079d738afd95e016440a29e5ed3ce5dcc1f79cd7cb8eac1d62"
 }
