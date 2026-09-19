@@ -38,7 +38,7 @@ export declare class NativeStreamPermit {
 
 export declare class NativeWorkbook {
   get info(): WorkbookInfo
-  loadSheet(index: number, maxCells: number, formulas: boolean, signal?: NativeCancellation | undefined | null): Promise<NativeSheet>
+  loadSheet(index: number, maxCells: number | undefined | null, formulas: boolean, signal?: NativeCancellation | undefined | null): Promise<NativeSheet>
   vbaProject(maxBytes: number, signal?: NativeCancellation | undefined | null): Promise<VbaProject | undefined | null>
   close(): Promise<undefined>
 }

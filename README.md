@@ -109,7 +109,7 @@ const result = await read('/data/report.xlsx', {
   sheets: ['Sales', 'Forecast'],
   content: 'values', // Use 'formulas' to read formula text.
   includeVba: true,
-  maxCells: 2_000_000,
+  maxCells: 2_000_000, // Optional cap; unlimited by default.
   maxInputBytes: 64 * 1024 * 1024,
   maxVbaBytes: 16 * 1024 * 1024,
   signal: controller.signal,
@@ -270,7 +270,7 @@ const results = await Promise.all(paths.map((path) => reader.read(path)));
 | --------------------- | ---------------------- | ----------------------------------------------------- |
 | `concurrency`         | Runtime worker count   | Normally available logical CPUs; explicit range 1–128 |
 | `maxInputBytes`       | 64 MiB                 | Input byte limit before decompression                 |
-| `maxCells`            | 2,000,000              | Returned rectangle cell budget                        |
+| `maxCells`            | `Infinity`             | Optional returned rectangle cell budget               |
 | `tempDirectory`       | OS temporary directory | Parent directory for streamed input                   |
 | `experimentalFormats` | `[]`                   | Opt in to XLSB and/or ODS, e.g. `['xlsb', 'ods']`     |
 
@@ -289,9 +289,13 @@ Streams hold a slot while spooling, without occupying a native thread, and trans
 it to parsing. Queued streams are not pulled by the library; an already-started
 producer may buffer independently. Local files open only after a slot is available.
 
-`maxCells` counts the dense used rectangle, including empty holes. It applies across
-all selected sheets in a complete read; zero accepts empty ranges only. It is checked
-after Calamine allocates the range, before JS conversion. `maxInputBytes` limits
+There is no cell-count limit by default. Set `maxCells` to a nonnegative integer
+(up to 4,294,967,295) to cap the dense used rectangle, including empty holes, or
+`Infinity` to disable an inherited limit. The budget applies across all selected
+sheets in a complete read; zero accepts empty ranges only. Finite limits are checked
+after Calamine allocates the range, before JS conversion. Complete reads retain all
+returned rows in JS memory; use batches when you can process rows incrementally.
+`maxInputBytes` limits
 compressed input, not ZIP expansion or peak memory. Use an isolated process with OS
 limits when hard memory or time bounds are required.
 

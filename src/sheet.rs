@@ -66,7 +66,7 @@ impl NativeSheet {
     pub(crate) fn load(
         book: &mut Book,
         index: u32,
-        max_cells: u32,
+        max_cells: Option<u32>,
         formulas: bool,
         executor: Arc<Executor>,
     ) -> Result<Self> {
@@ -88,7 +88,9 @@ impl NativeSheet {
         };
         let (rows, columns) = data.size();
         // Calamine has already allocated this range: a result limit, not a memory sandbox.
-        if (rows as u64) * (columns as u64) > max_cells.into() {
+        if let Some(limit) = max_cells
+            && (rows as u64) * (columns as u64) > u64::from(limit)
+        {
             return Err(error(
                 "ERR_CELL_LIMIT",
                 "worksheet rectangle exceeds maxCells",

@@ -81,7 +81,6 @@ export async function collectWorkbook(
   signal?.throwIfAborted();
   const selectors = snapshotSelectors(options.sheets);
   const reading = normalizeSheetOptions(options, defaultMaxCells, collectionBatchSize);
-  const maxCells = integer(options.maxCells ?? defaultMaxCells, 'maxCells', 0);
   const includeVba = options.includeVba ?? false;
   if (typeof includeVba !== 'boolean') {
     throw new TypeError('includeVba must be a boolean');
@@ -95,7 +94,7 @@ export async function collectWorkbook(
     // refer to one result, preserving the caller's first-requested order.
     const indices = selectedIndices(workbook, selectors);
     const sheets: SheetResult[] = [];
-    let remainingCells = maxCells;
+    let remainingCells = reading.maxCells;
 
     for (const index of indices) {
       const sheet = await workbook.readSheet(index, { ...reading, maxCells: remainingCells });

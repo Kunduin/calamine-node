@@ -56,4 +56,16 @@ const rows = Array.from({ length: 10_000 }, (_, row) =>
 XLSX.utils.book_append_sheet(large, XLSX.utils.aoa_to_sheet(rows), 'Data');
 XLSX.writeFile(large, join(output, 'large.xlsx'), { compression: true });
 
+const sparse = XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(
+  sparse,
+  {
+    '!ref': 'A1:ALL2001',
+    A1: { t: 'n', v: 1 },
+    ALL2001: { t: 'n', v: 2 },
+  },
+  'Data',
+);
+XLSX.writeFile(sparse, join(output, 'sparse-large.xlsx'), { compression: true });
+
 console.log(`Generated synthetic fixtures with SheetJS ${XLSX.version}`);

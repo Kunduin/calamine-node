@@ -83,11 +83,12 @@ export class OpenWorkbook implements WorkbookHandle {
 
     this.#busy = true;
     let native: NativeSheet | undefined;
+    const limit = maxCells === Infinity ? undefined : maxCells;
 
     try {
       native = await this.#run(
         (cancellation) =>
-          this.native.loadSheet(sheet.index, maxCells, content === 'formulas', cancellation),
+          this.native.loadSheet(sheet.index, limit, content === 'formulas', cancellation),
         signal,
       );
       this.#assertOpen();

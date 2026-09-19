@@ -9,6 +9,7 @@
 - Select sheets, read formulas and defined names, and inspect VBA projects.
 - Workbook handles and row batches for incremental consumption.
 - Native concurrency, automatic waiting, cancellation, and configurable limits.
+- Unlimited cell counts by default, with optional per-reader or per-read budgets.
 - Native packages for Linux GNU/musl, macOS, and Windows on x64 and ARM64.
 
 XLSB and ODS are available through explicit experimental opt-in. See the README

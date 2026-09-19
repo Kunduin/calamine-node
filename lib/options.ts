@@ -5,6 +5,10 @@ import type { SheetReadOptions, SheetSelector } from './types.js';
 // calls for complete reads. OpenWorkbook also caps each batch by cell count.
 export const collectionBatchSize = 512;
 
+export function cellLimit(value: number): number {
+  return value === Infinity ? value : integer(value, 'maxCells', 0);
+}
+
 export function normalizeSheetOptions(
   options: SheetReadOptions,
   defaultMaxCells: number,
@@ -18,7 +22,7 @@ export function normalizeSheetOptions(
   return {
     content,
     batchSize: integer(options.batchSize ?? defaultBatchSize, 'batchSize', 1, 10_000),
-    maxCells: integer(options.maxCells ?? defaultMaxCells, 'maxCells', 0),
+    maxCells: cellLimit(options.maxCells ?? defaultMaxCells),
     ...(options.signal === undefined ? {} : { signal: options.signal }),
   };
 }

@@ -108,7 +108,7 @@ impl NativeWorkbook {
         &self,
         env: Env,
         index: u32,
-        max_cells: u32,
+        max_cells: Option<u32>,
         formulas: bool,
         signal: Option<&NativeCancellation>,
     ) -> Result<AsyncBlock<NativeSheet>> {

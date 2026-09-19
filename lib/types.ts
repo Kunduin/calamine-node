@@ -41,14 +41,14 @@ export interface SheetReadOptions {
   readonly batchSize?: number;
   /** Read cached values (default) or formula text. Formulas are never evaluated. */
   readonly content?: 'values' | 'formulas';
-  /** Maximum cells in the used rectangle, including holes. Zero accepts empty ranges only. */
+  /** Cell budget including holes. Infinity disables the limit; zero accepts empty ranges only. */
   readonly maxCells?: number;
 }
 
 export interface ReadOptions extends SheetReadOptions, OpenOptions {
   /** Name, zero-based index, or a list. Omit for all worksheets; [] reads metadata only. */
   readonly sheets?: SheetSelector | readonly SheetSelector[];
-  /** Maximum cells across all selected sheets, including holes. */
+  /** Cell budget across selected sheets, including holes. Infinity disables the limit. */
   readonly maxCells?: number;
   readonly includeVba?: boolean;
   /** Maximum decoded VBA source bytes, when includeVba is true. */
@@ -68,6 +68,7 @@ export interface ReaderOptions {
   /** Defaults to the napi-rs Tokio runtime's worker count (normally available logical CPUs). */
   readonly concurrency?: number;
   readonly maxInputBytes?: number;
+  /** Cell budget, including holes. Defaults to Infinity (no limit). */
   readonly maxCells?: number;
   readonly tempDirectory?: string;
   /** Opt in to formats with known upstream interoperability gaps. */

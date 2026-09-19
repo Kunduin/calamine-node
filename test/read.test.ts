@@ -98,6 +98,47 @@ test('all selected rectangles share one result budget, including empty-sheet bou
   assert.deepEqual((await read(fixture(), { sheets: 'Empty', maxCells: 0 })).sheets[0]?.rows, []);
 });
 
+test('default reads accept rectangles larger than two million cells', async () => {
+  const result = await read(fixture('sparse-large.xlsx'));
+  const sheet = result.sheets[0];
+  assert.ok(sheet);
+  assert.equal(sheet.rowCount, 2001);
+  assert.equal(sheet.columnCount, 1000);
+  assert.equal(sheet.rows.length, 2001);
+  assert.equal(sheet.rows[0]?.length, 1000);
+  assert.equal(sheet.rows[0]?.[0], 1);
+  assert.equal(sheet.rows[1000]?.[500], null);
+  assert.equal(sheet.rows.at(-1)?.at(-1), 2);
+});
+
+test('Infinity disables reader limits for complete reads, sheets, and batches', async () => {
+  const reader = createReader({ maxCells: 0 });
+  const expected = await read(fixture());
+  assert.deepEqual(await reader.read(fixture(), { maxCells: Infinity }), expected);
+  assert.deepEqual(await createReader({ maxCells: Infinity }).read(fixture()), expected);
+
+  const book = await reader.openFile(fixture());
+  try {
+    await assert.rejects(book.readSheet(0), { code: 'ERR_CELL_LIMIT' });
+    assert.deepEqual(await book.readSheet(0, { maxCells: Infinity }), expected.sheets[0]);
+
+    const rows = [];
+    for await (const batch of book.readBatches(0, { maxCells: Infinity, batchSize: 1 })) {
+      rows.push(...batch.rows);
+    }
+    assert.deepEqual(rows, expected.sheets[0]?.rows);
+  } finally {
+    await book.close();
+  }
+});
+
+test('cell limits reject invalid numbers while preserving the zero and Infinity meanings', async () => {
+  for (const maxCells of [NaN, -Infinity, -1, 0.5, 0x1_0000_0000]) {
+    assert.throws(() => createReader({ maxCells }), TypeError);
+    await assert.rejects(read(fixture(), { maxCells }), TypeError);
+  }
+});
+
 test('an empty selection returns metadata without materializing cell data', async () => {
   const reader = createReader({ maxCells: 0, experimentalFormats: ['xlsb'] });
   const metadata = await reader.read(fixture('upstream/issues.xlsb'), { sheets: [] });

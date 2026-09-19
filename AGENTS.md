@@ -97,6 +97,9 @@ incremental output uses `RowBatch`. Keep one canonical name per concept.
   formula results, calendar components, and large integer precision.
 - Do not invent timezones or evaluate formulas or VBA.
 - A result cell limit is not a hard bound on decompression or native allocations.
+- Cell counts are unlimited by default. `maxCells: Infinity` disables an inherited
+  limit; finite budgets remain aggregate across selected sheets, and zero permits
+  empty ranges only. Represent an absent native limit explicitly, without a numeric sentinel.
 - Keep synthetic fixtures and explicitly licensed upstream fixtures. Never commit
   customer files, production workbooks, credentials, or private paths into examples.
 - Document verified capabilities, known upstream gaps, and unverified platforms.

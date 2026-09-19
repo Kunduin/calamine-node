@@ -6,6 +6,7 @@ import binding from '../native/binding.cjs';
 import type { NativeWorkbook } from '../native/binding.cjs';
 import { SpreadsheetError, integer } from './errors.js';
 import { nativeOperation } from './native.js';
+import { cellLimit } from './options.js';
 import { spool } from './stream.js';
 import { OpenWorkbook } from './workbook.js';
 import { collectWorkbook } from './read.js';
@@ -44,7 +45,7 @@ class WorkbookReader implements Reader {
         ? undefined
         : integer(options.concurrency, 'concurrency', 1, 128);
     this.#maxInputBytes = integer(options.maxInputBytes ?? 64 * 1024 * 1024, 'maxInputBytes');
-    this.#maxCells = integer(options.maxCells ?? 2_000_000, 'maxCells', 0);
+    this.#maxCells = cellLimit(options.maxCells ?? Infinity);
     this.#experimentalFormats = new Set(options.experimentalFormats ?? []);
     for (const format of this.#experimentalFormats) {
       if (format !== 'xlsb' && format !== 'ods') {
