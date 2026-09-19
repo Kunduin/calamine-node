@@ -117,9 +117,10 @@ incremental output uses `RowBatch`. Keep one canonical name per concept.
   include elapsed time, main-thread CPU, and concurrent batches in readable tables.
   State the execution model and distinguish direct SheetJS calls from a Worker pool;
   do not present accumulated CPU time as one continuous event-loop stall.
-- Keep the README concise: quick examples and measured advantages belong there;
-  detailed contracts belong in `docs/api.md`. Omit provider-specific integration
-  recipes. Label comparisons as Speedup, calculated as SheetJS elapsed time divided
+- Keep all public API documentation in the README, including examples, options,
+  return values, ownership, limits, and errors; do not create a separate API document.
+  Remove repetition and omit provider-specific integration recipes.
+  Label comparisons as Speedup, calculated as SheetJS elapsed time divided
   by calamine-node elapsed time; do not mix that with internal concurrency scaling.
 - Write in a conventional library-author style: direct examples and clear contracts.
   Keep result shape, supported inputs, common options, batching, concurrency, and

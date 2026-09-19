@@ -102,7 +102,8 @@ faster on Bun, respectively. Native parsing also leaves the JS thread available
 for other work between result batches. It does not eliminate JS-thread costs or
 prove a universal advantage for small files, every producer, XLS, or concurrent
 customer workloads. Cell semantics outside these numeric/string fixtures differ
-between libraries; see the API reference and compatibility notes before migrating.
+between libraries; see the [README](../README.md#cell-values-dates-and-formulas)
+and [compatibility notes](compatibility.md) before migrating.
 
 Native file input avoids loading the entire compressed file into a JS Buffer.
 Batch consumption can avoid retaining all returned JS rows. Neither behavior is

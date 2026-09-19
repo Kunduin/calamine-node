@@ -45,8 +45,8 @@ the entire input. When automatic detection fails, upstream may return a generic
 format error instead of the most specific parser error.
 
 Formula mode reads expressions; value mode reads cached results. Dates and errors
-use the tags described in the [API reference](api.md#cell-values-dates-and-formulas). No additional date inference, locale-aware
-formatting or formula execution is performed.
+use the tags described in the [README](../README.md#cell-values-dates-and-formulas).
+No additional date inference, locale-aware formatting or formula execution is performed.
 
 The stream API spools first. Batch output still retains Calamine's full worksheet
 range. XLS and ODS can parse all worksheets during open. Limits do not provide a

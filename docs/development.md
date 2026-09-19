@@ -74,7 +74,8 @@ so closing it releases a paused iterator's range. Cleanup itself cannot be cance
 Concurrency bounds executing operations, not all resident inputs or open handles.
 Queued Buffers retain snapshots, and complete results remain live while the caller
 retains them. Batch output does not make Calamine's worksheet allocation streaming.
-See the [API reference](api.md#concurrency-limits-and-cancellation) for limits and cancellation semantics.
+See the [README](../README.md#concurrency-limits-and-cancellation) for limits and
+cancellation semantics.
 
 ## Maintenance scripts
 
