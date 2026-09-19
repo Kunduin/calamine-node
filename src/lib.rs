@@ -6,6 +6,7 @@
 mod cancellation;
 mod cell;
 mod executor;
+mod merged_cells;
 mod reader;
 mod sheet;
 mod source;

@@ -38,13 +38,23 @@ export declare class NativeStreamPermit {
 
 export declare class NativeWorkbook {
   get info(): WorkbookInfo
-  loadSheet(index: number, maxCells: number | undefined | null, formulas: boolean, signal?: NativeCancellation | undefined | null): Promise<NativeSheet>
+  loadSheet(index: number, maxCells: number | undefined | null, formulas: boolean, includeMergedCells: boolean, signal?: NativeCancellation | undefined | null): Promise<NativeSheet>
   vbaProject(maxBytes: number, signal?: NativeCancellation | undefined | null): Promise<VbaProject | undefined | null>
   close(): Promise<undefined>
 }
 
 export interface Batch {
   rows: Array<Array<CellValue>>
+}
+
+export interface CellPosition {
+  row: number
+  column: number
+}
+
+export interface CellRange {
+  start: CellPosition
+  end: CellPosition
 }
 
 export type CellValue = string | number | boolean | null | SpecialValue
@@ -59,6 +69,7 @@ export interface RangeInfo {
   column?: number
   rowCount: number
   columnCount: number
+  mergedCells?: Array<CellRange>
 }
 
 export interface SheetInfo {

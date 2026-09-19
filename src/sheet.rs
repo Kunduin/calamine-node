@@ -11,6 +11,7 @@ use crate::{
     cancellation::NativeCancellation,
     cell::{CellValue, cell},
     executor::Executor,
+    merged_cells::{CellRange, read_merged_cells},
     source::Book,
     state::{Shared, error, lock},
 };
@@ -53,6 +54,7 @@ pub struct RangeInfo {
     pub column: Option<u32>,
     pub row_count: u32,
     pub column_count: u32,
+    pub merged_cells: Option<Vec<CellRange>>,
 }
 
 #[napi]
@@ -68,6 +70,7 @@ impl NativeSheet {
         index: u32,
         max_cells: Option<u32>,
         formulas: bool,
+        include_merged_cells: bool,
         executor: Arc<Executor>,
     ) -> Result<Self> {
         let name = book
@@ -102,6 +105,11 @@ impl NativeSheet {
             column: origin.map(|p| p.1),
             row_count: rows as u32,
             column_count: columns as u32,
+            merged_cells: if include_merged_cells {
+                Some(read_merged_cells(book, &name)?)
+            } else {
+                None
+            },
         };
         Ok(NativeSheet {
             state: Arc::new(Mutex::new(Some(data))),

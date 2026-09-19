@@ -110,6 +110,7 @@ impl NativeWorkbook {
         index: u32,
         max_cells: Option<u32>,
         formulas: bool,
+        include_merged_cells: bool,
         signal: Option<&NativeCancellation>,
     ) -> Result<AsyncBlock<NativeSheet>> {
         let state = self.state.clone();
@@ -129,8 +130,14 @@ impl NativeWorkbook {
                 ));
             }
 
-            let sheet =
-                NativeSheet::load(&mut workbook.book, index, max_cells, formulas, executor)?;
+            let sheet = NativeSheet::load(
+                &mut workbook.book,
+                index,
+                max_cells,
+                formulas,
+                include_merged_cells,
+                executor,
+            )?;
             // Retain the range so workbook.close() also disposes a paused iterator.
             workbook.sheet = Some(sheet.shared_state());
             Ok(sheet)

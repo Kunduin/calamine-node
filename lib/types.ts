@@ -1,7 +1,20 @@
-import type { SheetInfo, SpecialValue, DefinedName, VbaProject } from '../native/binding.cjs';
+import type {
+  SheetInfo,
+  SpecialValue,
+  DefinedName,
+  VbaProject,
+  CellRange,
+} from '../native/binding.cjs';
 import type { ByteStream } from './stream.js';
 
-export type { SheetInfo, SpecialValue, DefinedName, VbaProject } from '../native/binding.cjs';
+export type {
+  SheetInfo,
+  SpecialValue,
+  DefinedName,
+  VbaProject,
+  CellRange,
+  CellPosition,
+} from '../native/binding.cjs';
 export type { ByteStream } from './stream.js';
 
 /** Numeric dates retain Excel serials and calendar components; no timezone is invented. */
@@ -22,6 +35,8 @@ export interface SheetResult extends Readonly<SheetInfo> {
   readonly rowCount: number;
   readonly columnCount: number;
   readonly rows: Row[];
+  /** Absolute, zero-based, inclusive ranges. Present only when requested. */
+  readonly mergedCells?: readonly CellRange[];
 }
 
 export interface RowBatch extends SheetResult {
@@ -41,6 +56,8 @@ export interface SheetReadOptions {
   readonly batchSize?: number;
   /** Read cached values (default) or formula text. Formulas are never evaluated. */
   readonly content?: 'values' | 'formulas';
+  /** Include merged-cell ranges for XLS/XLSX, without filling covered cells. */
+  readonly includeMergedCells?: boolean;
   /** Cell budget including holes. Infinity disables the limit; zero accepts empty ranges only. */
   readonly maxCells?: number;
 }

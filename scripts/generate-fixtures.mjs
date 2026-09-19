@@ -68,4 +68,35 @@ XLSX.utils.book_append_sheet(
 );
 XLSX.writeFile(sparse, join(output, 'sparse-large.xlsx'), { compression: true });
 
+for (const bookType of ['xlsx', 'biff8']) {
+  const workbook = XLSX.utils.book_new();
+  const ranges = ['C3:E3', 'C4:C6', 'D4:E6', 'G3:I3', 'C510:C515'];
+  XLSX.utils.book_append_sheet(
+    workbook,
+    {
+      '!ref': 'C3:I517',
+      '!merges': ranges.map(XLSX.utils.decode_range),
+      C3: { t: 's', v: 'horizontal' },
+      F3: { t: 's', v: 'ordinary' },
+      C4: { t: 's', v: 'vertical' },
+      D4: { t: 's', v: 'rectangle' },
+      C510: { t: 's', v: 'cross-batch' },
+      D515: { t: 'n', v: 99 },
+      C517: { t: 's', v: 'after-merge' },
+    },
+    'Merged',
+  );
+  XLSX.utils.book_append_sheet(
+    workbook,
+    {
+      '!ref': 'B2:D5',
+      '!merges': [XLSX.utils.decode_range('B2:D5')],
+    },
+    'EmptyMerged',
+  );
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([['plain']]), 'Plain');
+  const extension = bookType === 'biff8' ? 'xls' : 'xlsx';
+  XLSX.writeFile(workbook, join(output, `merged.${extension}`), { bookType, compression: true });
+}
+
 console.log(`Generated synthetic fixtures with SheetJS ${XLSX.version}`);

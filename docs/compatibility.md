@@ -54,7 +54,25 @@ hard bound on native allocation, decompression or execution time.
 
 ## Coverage boundaries
 
-Images, tables, merged-cell geometry, formatted display text, encrypted workbooks,
-writing and macro execution are outside this initial public API. The package provides
-Calamine's core workbook reader capabilities, not a complete binding for every
-format-specific method.
+Merged-cell ranges are available for XLS/XLSX through `includeMergedCells`.
+Values are not filled across merged regions. XLSB/ODS merge extraction is unsupported.
+
+The binding does not yet expose upstream workbook date-system flags, XLSX hyperlink
+targets, structured tables, pivot definitions/caches or feature-gated pictures.
+Date-tag calendar components do respect the workbook epoch. Sheet order, kind and
+visibility are exposed; hidden rows/columns and display formatting are not.
+
+Calamine's public name metadata contains name/expression pairs without worksheet-local
+scope. Its cell model does not expose general number-format codes, so a numeric value
+displayed as `000123` is returned as `123`. A string containing `000123` is preserved.
+Formatted display text cannot be reconstructed reliably from raw values alone.
+
+The integer precision guarantee applies to values upstream reports as `Data::Int`.
+Numeric literals parsed as `Data::Float` are already IEEE-754 values; digits lost at
+that stage cannot be recovered by the Node binding. Formula values are cached results:
+an absent cache can read as null even when a formula exists. Read formulas separately
+and align by absolute coordinates when that distinction matters.
+
+Encrypted workbooks, writing and formula/macro execution are outside this read-only
+API. This is a binding for selected Calamine capabilities, not lossless preservation
+of every Excel property.

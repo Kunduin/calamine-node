@@ -109,6 +109,7 @@ const result = await read('/data/report.xlsx', {
   sheets: ['Sales', 'Forecast'],
   content: 'values', // Use 'formulas' to read formula text.
   includeVba: true,
+  includeMergedCells: true,
   maxCells: 2_000_000, // Optional cap; unlimited by default.
   maxInputBytes: 64 * 1024 * 1024,
   maxVbaBytes: 16 * 1024 * 1024,
@@ -177,6 +178,7 @@ does not replace closing a handle.
 | `rowCount`, `columnCount`             | Dimensions of the complete used rectangle                              |
 | `offset`                              | First row's zero-based offset relative to `origin`                     |
 | `rows`                                | This batch's rows, padded with `null` inside the rectangle             |
+| `mergedCells`                         | Optional absolute merged-cell ranges; present when requested           |
 
 Leading unused rows and columns are represented by `origin`, without allocating
 extra rows. An empty sheet yields one empty batch with zero dimensions. `readSheet`
@@ -196,6 +198,23 @@ Breaking a `for await` loop closes the decoded sheet. If you advance an iterator
 manually and stop early, call its `return()` or close the workbook. One workbook
 allows one active read operation or iterator; another receives `ERR_BUSY`.
 Use separate workbooks for concurrent reads.
+
+### Merged cells
+
+For XLS/XLSX, set `includeMergedCells: true` on `read`, `readSheet`, or `readBatches`.
+Each sheet then includes `mergedCells`, an array of inclusive, zero-based worksheet
+ranges such as `{ start: { row: 0, column: 0 }, end: { row: 2, column: 0 } }`.
+An empty array means no merges; the field is omitted when not requested.
+
+The top-left cell is the anchor. Raw rows remain unchanged: covered cells are not
+filled with the anchor value, and ordinary empty cells remain distinguishable from
+merged cells. Subtract `origin` from an absolute coordinate to index `rows`.
+Merge ranges may extend beyond the value rectangle, including on an empty sheet.
+Every batch carries the same absolute ranges, even when a merge crosses batches.
+
+Calamine reads the ranges directly. XLSX requires an additional worksheet XML scan;
+XLS retains them during opening. XLSB/ODS merge requests reject with `ERR_UNSUPPORTED`.
+`maxCells` bounds the value rectangle, not the total area covered by merge ranges.
 
 ### Cell values, dates and formulas
 
@@ -321,8 +340,8 @@ further delivery. Abort reasons are preserved.
 
 A `Reader` exposes the same `read`, `openFile`, `openBuffer`, and `openStream`
 methods as the top-level exports. `OpenOptions` contains `maxInputBytes` and
-`signal`; `SheetReadOptions` contains `content`, `maxCells`, `batchSize`, and
-`signal`. `SheetSelector` is a name or zero-based index. `ByteStream` is an
+`signal`; `SheetReadOptions` contains `content`, `includeMergedCells`, `maxCells`,
+`batchSize`, and `signal`. `SheetSelector` is a name or zero-based index. `ByteStream` is an
 `AsyncIterable<Uint8Array>` (including Node `Readable`) or Web
 `ReadableStream<Uint8Array>`.
 
@@ -339,6 +358,7 @@ arguments raise `TypeError`; input-stream errors and AbortSignal reasons pass th
 | `ERR_SHEET`                                          | Unknown sheet or failure to read its range/formulas               |
 | `ERR_INPUT_LIMIT`, `ERR_CELL_LIMIT`, `ERR_VBA_LIMIT` | Configured limit exceeded                                         |
 | `ERR_EXPERIMENTAL_FORMAT`                            | XLSB/ODS requires explicit experimental opt-in                    |
+| `ERR_UNSUPPORTED`                                    | Requested metadata is unavailable for the workbook format         |
 | `ERR_BUSY`                                           | Another read operation is active on the same workbook handle      |
 | `ERR_CLOSED`                                         | Workbook or iterator has been closed                              |
 | `ERR_VBA`, `ERR_STATE`                               | VBA extraction failure or invalid native state                    |

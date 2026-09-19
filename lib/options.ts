@@ -19,8 +19,14 @@ export function normalizeSheetOptions(
     throw new TypeError('content must be values or formulas');
   }
 
+  const includeMergedCells = options.includeMergedCells ?? false;
+  if (typeof includeMergedCells !== 'boolean') {
+    throw new TypeError('includeMergedCells must be a boolean');
+  }
+
   return {
     content,
+    includeMergedCells,
     batchSize: integer(options.batchSize ?? defaultBatchSize, 'batchSize', 1, 10_000),
     maxCells: cellLimit(options.maxCells ?? defaultMaxCells),
     ...(options.signal === undefined ? {} : { signal: options.signal }),

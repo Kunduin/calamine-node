@@ -25,6 +25,7 @@ function metadata(info: RangeInfo, sheet: Readonly<SheetInfo>): Omit<SheetResult
     origin: info.row == null || info.column == null ? null : { row: info.row, column: info.column },
     rowCount: info.rowCount,
     columnCount: info.columnCount,
+    ...(info.mergedCells == null ? {} : { mergedCells: info.mergedCells }),
   };
 }
 
@@ -64,7 +65,7 @@ export class OpenWorkbook implements WorkbookHandle {
     options: SheetReadOptions = {},
   ): AsyncGenerator<RowBatch> {
     this.#assertOpen();
-    const { signal, batchSize, maxCells, content } = normalizeSheetOptions(
+    const { signal, batchSize, maxCells, content, includeMergedCells } = normalizeSheetOptions(
       options,
       this.maxCells,
       256,
@@ -88,7 +89,13 @@ export class OpenWorkbook implements WorkbookHandle {
     try {
       native = await this.#run(
         (cancellation) =>
-          this.native.loadSheet(sheet.index, limit, content === 'formulas', cancellation),
+          this.native.loadSheet(
+            sheet.index,
+            limit,
+            content === 'formulas',
+            includeMergedCells,
+            cancellation,
+          ),
         signal,
       );
       this.#assertOpen();
@@ -142,6 +149,7 @@ export class OpenWorkbook implements WorkbookHandle {
         origin: batch.origin,
         rowCount: batch.rowCount,
         columnCount: batch.columnCount,
+        ...(batch.mergedCells === undefined ? {} : { mergedCells: batch.mergedCells }),
         rows,
       };
       for (const row of batch.rows) {

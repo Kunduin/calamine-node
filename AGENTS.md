@@ -95,6 +95,9 @@ incremental output uses `RowBatch`. Keep one canonical name per concept.
 
 - Preserve coordinates, empty cells versus empty strings, error values, cached
   formula results, calendar components, and large integer precision.
+- Use Calamine's merged-cell APIs for absolute, inclusive ranges. Preserve anchor
+  values and ordinary blanks; never infer merges from empty cells or fill covered
+  cells implicitly. Test offsets, empty merges and ranges crossing output batches.
 - Do not invent timezones or evaluate formulas or VBA.
 - A result cell limit is not a hard bound on decompression or native allocations.
 - Cell counts are unlimited by default. `maxCells: Infinity` disables an inherited

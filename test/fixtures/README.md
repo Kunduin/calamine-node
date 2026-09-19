@@ -5,6 +5,9 @@ contain synthetic values created by `scripts/generate-fixtures.mjs`, using Sheet
 takes an explicit path to a SheetJS installation; SheetJS is not a package dependency.
 These generated workbooks are covered by this project's MIT license.
 
+`merged.xlsx` and `merged.xls` are also synthetic. They cover horizontal, vertical,
+rectangular and empty merges, nonzero origins, and a merge crossing output batches.
+
 `sparse-large.xlsx` has two populated cells spanning a 2,001 × 1,000 rectangle.
 It verifies that default reads accept more than two million cells and retain holes.
 
