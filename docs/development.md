@@ -107,6 +107,7 @@ Work on `main` using Conventional Commits (`feat:`, `fix:`, `docs:`, `ci:`, and
 other appropriate types). Release Please maintains a version PR with the title
 `chore: release vX.Y.Z`, updating `package.json`, `Cargo.toml`, `Cargo.lock`, and
 `CHANGELOG.md`. No separate long-lived release branch is needed.
+The generated changelog retains Release Please's formatting and is excluded from Oxfmt.
 
 Merge that PR when ready to release. Automation creates a version tag and draft
 GitHub Release, then starts `publish.yml`. The workflow:

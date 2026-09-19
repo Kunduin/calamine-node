@@ -10,6 +10,7 @@
     "target/",
     "pnpm-lock.yaml",
     "Cargo.lock",
+    "CHANGELOG.md",
     "test/fixtures/"
   ]
 }
