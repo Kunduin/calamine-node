@@ -17,6 +17,10 @@
     "url": "https://github.com/Kunduin/calamine-node/issues"
   },
   "license": "MIT",
+  "author": {
+    "name": "Kunduin",
+    "url": "https://github.com/Kunduin"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Kunduin/calamine-node.git"
