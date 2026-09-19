@@ -473,6 +473,717 @@
           "heartbeatMaxGapMs": 235.76123099999995
         }
       ]
+    },
+    {
+      "runtime": "Node v22.23.2",
+      "host": {
+        "platform": "linux",
+        "arch": "x64",
+        "cpu": "12th Gen Intel(R) Core(TM) i5-12400",
+        "logicalCpus": 12
+      },
+      "engine": "calamine",
+      "input": "calamine-numeric-1m.xlsx",
+      "inputBytes": 8441250,
+      "inputSha256": "b2651003d81c3121ff4defbef092750edd500a23e70a0c62d2304da127b324ee",
+      "inputMode": "buffer",
+      "requests": 10,
+      "concurrency": 1,
+      "output": {
+        "dimensions": [
+          {
+            "rows": 50000,
+            "columns": 20
+          }
+        ],
+        "sha256": "d14bfa7c49998989e9bce14f8e2b42d9c39f793cc8a62231852c0b2227973aa5"
+      },
+      "forcedGc": true,
+      "medians": {
+        "wallMs": 3166.6971489999996,
+        "mainThreadCpuMs": 902.166,
+        "heartbeatMaxGapMs": 19.549395000000004
+      },
+      "samples": [
+        {
+          "wallMs": 3165.441564,
+          "mainThreadCpuMs": 845.858,
+          "heartbeatMaxGapMs": 17.341147000000092
+        },
+        {
+          "wallMs": 3285.572083,
+          "mainThreadCpuMs": 1013.896,
+          "heartbeatMaxGapMs": 19.549395000000004
+        },
+        {
+          "wallMs": 3063.083494999999,
+          "mainThreadCpuMs": 799.905,
+          "heartbeatMaxGapMs": 18.63031199999932
+        },
+        {
+          "wallMs": 3166.6971489999996,
+          "mainThreadCpuMs": 902.166,
+          "heartbeatMaxGapMs": 20.366517999998905
+        },
+        {
+          "wallMs": 3280.905012000001,
+          "mainThreadCpuMs": 1019.624,
+          "heartbeatMaxGapMs": 20.98101200000019
+        }
+      ]
+    },
+    {
+      "runtime": "Node v22.23.2",
+      "host": {
+        "platform": "linux",
+        "arch": "x64",
+        "cpu": "12th Gen Intel(R) Core(TM) i5-12400",
+        "logicalCpus": 12
+      },
+      "engine": "calamine",
+      "input": "calamine-numeric-1m.xlsx",
+      "inputBytes": 8441250,
+      "inputSha256": "b2651003d81c3121ff4defbef092750edd500a23e70a0c62d2304da127b324ee",
+      "inputMode": "buffer",
+      "requests": 10,
+      "concurrency": "runtime-default",
+      "output": {
+        "dimensions": [
+          {
+            "rows": 50000,
+            "columns": 20
+          }
+        ],
+        "sha256": "d14bfa7c49998989e9bce14f8e2b42d9c39f793cc8a62231852c0b2227973aa5"
+      },
+      "forcedGc": true,
+      "medians": {
+        "wallMs": 1091.4833999999998,
+        "mainThreadCpuMs": 815.192,
+        "heartbeatMaxGapMs": 11.186297000000195
+      },
+      "samples": [
+        {
+          "wallMs": 1091.4833999999998,
+          "mainThreadCpuMs": 815.192,
+          "heartbeatMaxGapMs": 16.577555000000075
+        },
+        {
+          "wallMs": 1075.4818249999998,
+          "mainThreadCpuMs": 804.69,
+          "heartbeatMaxGapMs": 9.93030200000021
+        },
+        {
+          "wallMs": 1080.133741,
+          "mainThreadCpuMs": 795.489,
+          "heartbeatMaxGapMs": 9.847051999999167
+        },
+        {
+          "wallMs": 1115.2975239999996,
+          "mainThreadCpuMs": 817.645,
+          "heartbeatMaxGapMs": 11.186297000000195
+        },
+        {
+          "wallMs": 1151.427761,
+          "mainThreadCpuMs": 891.862,
+          "heartbeatMaxGapMs": 14.14732400000048
+        }
+      ]
+    },
+    {
+      "runtime": "Node v22.23.2",
+      "host": {
+        "platform": "linux",
+        "arch": "x64",
+        "cpu": "12th Gen Intel(R) Core(TM) i5-12400",
+        "logicalCpus": 12
+      },
+      "engine": "sheetjs",
+      "sheetjsVersion": "0.20.3",
+      "input": "calamine-numeric-1m.xlsx",
+      "inputBytes": 8441250,
+      "inputSha256": "b2651003d81c3121ff4defbef092750edd500a23e70a0c62d2304da127b324ee",
+      "inputMode": "buffer",
+      "requests": 10,
+      "concurrency": "runtime-default",
+      "output": {
+        "dimensions": [
+          {
+            "rows": 50000,
+            "columns": 20
+          }
+        ],
+        "sha256": "d14bfa7c49998989e9bce14f8e2b42d9c39f793cc8a62231852c0b2227973aa5"
+      },
+      "forcedGc": true,
+      "medians": {
+        "wallMs": 14488.382730000005,
+        "mainThreadCpuMs": 14275.008,
+        "heartbeatMaxGapMs": 14489.110688
+      },
+      "samples": [
+        {
+          "wallMs": 14406.232376,
+          "mainThreadCpuMs": 14219.027,
+          "heartbeatMaxGapMs": 14407.03413
+        },
+        {
+          "wallMs": 14467.456106999998,
+          "mainThreadCpuMs": 14275.008,
+          "heartbeatMaxGapMs": 14470.202225
+        },
+        {
+          "wallMs": 14837.181521999999,
+          "mainThreadCpuMs": 14659.397,
+          "heartbeatMaxGapMs": 14839.865439000001
+        },
+        {
+          "wallMs": 14488.382730000005,
+          "mainThreadCpuMs": 14260.165,
+          "heartbeatMaxGapMs": 14489.110688
+        },
+        {
+          "wallMs": 14882.641566999999,
+          "mainThreadCpuMs": 14695.807,
+          "heartbeatMaxGapMs": 14885.431820000013
+        }
+      ]
+    },
+    {
+      "runtime": "Node v22.23.2",
+      "host": {
+        "platform": "linux",
+        "arch": "x64",
+        "cpu": "12th Gen Intel(R) Core(TM) i5-12400",
+        "logicalCpus": 12
+      },
+      "engine": "calamine",
+      "input": "calamine-strings-100k.xlsx",
+      "inputBytes": 1677646,
+      "inputSha256": "f3d128d4eaa865701f595b5d8481f00d7308539134cb576a0fcbe470fb1010b8",
+      "inputMode": "buffer",
+      "requests": 10,
+      "concurrency": 1,
+      "output": {
+        "dimensions": [
+          {
+            "rows": 10000,
+            "columns": 10
+          }
+        ],
+        "sha256": "2eed7d52a7720e312deab1a6375c1912cfadd86c0404b0af0b0317b439abc807"
+      },
+      "forcedGc": true,
+      "medians": {
+        "wallMs": 633.7769920000001,
+        "mainThreadCpuMs": 258.307,
+        "heartbeatMaxGapMs": 17.280726999999843
+      },
+      "samples": [
+        {
+          "wallMs": 732.8022090000001,
+          "mainThreadCpuMs": 372.737,
+          "heartbeatMaxGapMs": 20.050345000000107
+        },
+        {
+          "wallMs": 669.6972040000003,
+          "mainThreadCpuMs": 252.953,
+          "heartbeatMaxGapMs": 16.628178999999818
+        },
+        {
+          "wallMs": 625.7198559999997,
+          "mainThreadCpuMs": 254.646,
+          "heartbeatMaxGapMs": 15.316674000000148
+        },
+        {
+          "wallMs": 631.47651,
+          "mainThreadCpuMs": 258.307,
+          "heartbeatMaxGapMs": 17.280726999999843
+        },
+        {
+          "wallMs": 633.7769920000001,
+          "mainThreadCpuMs": 261.318,
+          "heartbeatMaxGapMs": 17.49592399999983
+        }
+      ]
+    },
+    {
+      "runtime": "Node v22.23.2",
+      "host": {
+        "platform": "linux",
+        "arch": "x64",
+        "cpu": "12th Gen Intel(R) Core(TM) i5-12400",
+        "logicalCpus": 12
+      },
+      "engine": "calamine",
+      "input": "calamine-strings-100k.xlsx",
+      "inputBytes": 1677646,
+      "inputSha256": "f3d128d4eaa865701f595b5d8481f00d7308539134cb576a0fcbe470fb1010b8",
+      "inputMode": "buffer",
+      "requests": 10,
+      "concurrency": "runtime-default",
+      "output": {
+        "dimensions": [
+          {
+            "rows": 10000,
+            "columns": 10
+          }
+        ],
+        "sha256": "2eed7d52a7720e312deab1a6375c1912cfadd86c0404b0af0b0317b439abc807"
+      },
+      "forcedGc": true,
+      "medians": {
+        "wallMs": 341.115043,
+        "mainThreadCpuMs": 250.324,
+        "heartbeatMaxGapMs": 15.464848999999958
+      },
+      "samples": [
+        {
+          "wallMs": 314.97565599999996,
+          "mainThreadCpuMs": 257.627,
+          "heartbeatMaxGapMs": 15.608761999999956
+        },
+        {
+          "wallMs": 356.7324910000001,
+          "mainThreadCpuMs": 242.172,
+          "heartbeatMaxGapMs": 14.382305999999971
+        },
+        {
+          "wallMs": 335.32723899999996,
+          "mainThreadCpuMs": 250.324,
+          "heartbeatMaxGapMs": 14.142755999999963
+        },
+        {
+          "wallMs": 344.60416399999986,
+          "mainThreadCpuMs": 261.001,
+          "heartbeatMaxGapMs": 16.833544000000074
+        },
+        {
+          "wallMs": 341.115043,
+          "mainThreadCpuMs": 250.139,
+          "heartbeatMaxGapMs": 15.464848999999958
+        }
+      ]
+    },
+    {
+      "runtime": "Node v22.23.2",
+      "host": {
+        "platform": "linux",
+        "arch": "x64",
+        "cpu": "12th Gen Intel(R) Core(TM) i5-12400",
+        "logicalCpus": 12
+      },
+      "engine": "sheetjs",
+      "sheetjsVersion": "0.20.3",
+      "input": "calamine-strings-100k.xlsx",
+      "inputBytes": 1677646,
+      "inputSha256": "f3d128d4eaa865701f595b5d8481f00d7308539134cb576a0fcbe470fb1010b8",
+      "inputMode": "buffer",
+      "requests": 10,
+      "concurrency": "runtime-default",
+      "output": {
+        "dimensions": [
+          {
+            "rows": 10000,
+            "columns": 10
+          }
+        ],
+        "sha256": "2eed7d52a7720e312deab1a6375c1912cfadd86c0404b0af0b0317b439abc807"
+      },
+      "forcedGc": true,
+      "medians": {
+        "wallMs": 4918.15164,
+        "mainThreadCpuMs": 4876.441,
+        "heartbeatMaxGapMs": 4918.756297
+      },
+      "samples": [
+        {
+          "wallMs": 5025.013056,
+          "mainThreadCpuMs": 4980.595,
+          "heartbeatMaxGapMs": 5025.6280959999995
+        },
+        {
+          "wallMs": 5211.339764,
+          "mainThreadCpuMs": 5145.168,
+          "heartbeatMaxGapMs": 5211.915003
+        },
+        {
+          "wallMs": 4918.15164,
+          "mainThreadCpuMs": 4876.441,
+          "heartbeatMaxGapMs": 4918.756297
+        },
+        {
+          "wallMs": 4819.848173999999,
+          "mainThreadCpuMs": 4770.899,
+          "heartbeatMaxGapMs": 4820.430549000001
+        },
+        {
+          "wallMs": 4895.1765479999995,
+          "mainThreadCpuMs": 4818.257,
+          "heartbeatMaxGapMs": 4895.797369
+        }
+      ]
+    },
+    {
+      "runtime": "Bun 1.4.1",
+      "host": {
+        "platform": "linux",
+        "arch": "x64",
+        "cpu": "12th Gen Intel(R) Core(TM) i5-12400",
+        "logicalCpus": 12
+      },
+      "engine": "calamine",
+      "input": "calamine-numeric-1m.xlsx",
+      "inputBytes": 8441250,
+      "inputSha256": "b2651003d81c3121ff4defbef092750edd500a23e70a0c62d2304da127b324ee",
+      "inputMode": "buffer",
+      "requests": 10,
+      "concurrency": 1,
+      "output": {
+        "dimensions": [
+          {
+            "rows": 50000,
+            "columns": 20
+          }
+        ],
+        "sha256": "d14bfa7c49998989e9bce14f8e2b42d9c39f793cc8a62231852c0b2227973aa5"
+      },
+      "forcedGc": false,
+      "medians": {
+        "wallMs": 2595.8817409999992,
+        "mainThreadCpuMs": 321.268,
+        "heartbeatMaxGapMs": 26.074150000000373
+      },
+      "samples": [
+        {
+          "wallMs": 2674.145835,
+          "mainThreadCpuMs": 345.011,
+          "heartbeatMaxGapMs": 34.37122400000044
+        },
+        {
+          "wallMs": 2598.2206830000005,
+          "mainThreadCpuMs": 323.103,
+          "heartbeatMaxGapMs": 26.2802300000003
+        },
+        {
+          "wallMs": 2595.4538969999994,
+          "mainThreadCpuMs": 319.131,
+          "heartbeatMaxGapMs": 25.47774600000048
+        },
+        {
+          "wallMs": 2595.8817409999992,
+          "mainThreadCpuMs": 321.268,
+          "heartbeatMaxGapMs": 26.074150000000373
+        },
+        {
+          "wallMs": 2558.1890900000017,
+          "mainThreadCpuMs": 239.927,
+          "heartbeatMaxGapMs": 18.705298000000766
+        }
+      ]
+    },
+    {
+      "runtime": "Bun 1.4.1",
+      "host": {
+        "platform": "linux",
+        "arch": "x64",
+        "cpu": "12th Gen Intel(R) Core(TM) i5-12400",
+        "logicalCpus": 12
+      },
+      "engine": "calamine",
+      "input": "calamine-numeric-1m.xlsx",
+      "inputBytes": 8441250,
+      "inputSha256": "b2651003d81c3121ff4defbef092750edd500a23e70a0c62d2304da127b324ee",
+      "inputMode": "buffer",
+      "requests": 10,
+      "concurrency": "runtime-default",
+      "output": {
+        "dimensions": [
+          {
+            "rows": 50000,
+            "columns": 20
+          }
+        ],
+        "sha256": "d14bfa7c49998989e9bce14f8e2b42d9c39f793cc8a62231852c0b2227973aa5"
+      },
+      "forcedGc": false,
+      "medians": {
+        "wallMs": 644.9309119999999,
+        "mainThreadCpuMs": 256.987,
+        "heartbeatMaxGapMs": 14.23832399999992
+      },
+      "samples": [
+        {
+          "wallMs": 644.9309119999999,
+          "mainThreadCpuMs": 259.728,
+          "heartbeatMaxGapMs": 14.844426999999996
+        },
+        {
+          "wallMs": 630.342715,
+          "mainThreadCpuMs": 240.716,
+          "heartbeatMaxGapMs": 14.125087000000121
+        },
+        {
+          "wallMs": 585.4662570000003,
+          "mainThreadCpuMs": 249.148,
+          "heartbeatMaxGapMs": 11.537310999999818
+        },
+        {
+          "wallMs": 649.0316080000002,
+          "mainThreadCpuMs": 261.831,
+          "heartbeatMaxGapMs": 14.23832399999992
+        },
+        {
+          "wallMs": 662.7953480000001,
+          "mainThreadCpuMs": 256.987,
+          "heartbeatMaxGapMs": 15.128707999999733
+        }
+      ]
+    },
+    {
+      "runtime": "Bun 1.4.1",
+      "host": {
+        "platform": "linux",
+        "arch": "x64",
+        "cpu": "12th Gen Intel(R) Core(TM) i5-12400",
+        "logicalCpus": 12
+      },
+      "engine": "sheetjs",
+      "sheetjsVersion": "0.20.3",
+      "input": "calamine-numeric-1m.xlsx",
+      "inputBytes": 8441250,
+      "inputSha256": "b2651003d81c3121ff4defbef092750edd500a23e70a0c62d2304da127b324ee",
+      "inputMode": "buffer",
+      "requests": 10,
+      "concurrency": "runtime-default",
+      "output": {
+        "dimensions": [
+          {
+            "rows": 50000,
+            "columns": 20
+          }
+        ],
+        "sha256": "d14bfa7c49998989e9bce14f8e2b42d9c39f793cc8a62231852c0b2227973aa5"
+      },
+      "forcedGc": false,
+      "medians": {
+        "wallMs": 14899.046684,
+        "mainThreadCpuMs": 14853.516,
+        "heartbeatMaxGapMs": 14909.549774
+      },
+      "samples": [
+        {
+          "wallMs": 14899.046684,
+          "mainThreadCpuMs": 14853.516,
+          "heartbeatMaxGapMs": 14909.549774
+        },
+        {
+          "wallMs": 14858.903412,
+          "mainThreadCpuMs": 14808.338,
+          "heartbeatMaxGapMs": 14869.814898999997
+        },
+        {
+          "wallMs": 13920.400152000002,
+          "mainThreadCpuMs": 13870.347,
+          "heartbeatMaxGapMs": 13930.847647000002
+        },
+        {
+          "wallMs": 15118.376925000004,
+          "mainThreadCpuMs": 15070.325,
+          "heartbeatMaxGapMs": 15129.836159000006
+        },
+        {
+          "wallMs": 15278.722716999997,
+          "mainThreadCpuMs": 15226.31,
+          "heartbeatMaxGapMs": 15290.174933999995
+        }
+      ]
+    },
+    {
+      "runtime": "Bun 1.4.1",
+      "host": {
+        "platform": "linux",
+        "arch": "x64",
+        "cpu": "12th Gen Intel(R) Core(TM) i5-12400",
+        "logicalCpus": 12
+      },
+      "engine": "calamine",
+      "input": "calamine-strings-100k.xlsx",
+      "inputBytes": 1677646,
+      "inputSha256": "f3d128d4eaa865701f595b5d8481f00d7308539134cb576a0fcbe470fb1010b8",
+      "inputMode": "buffer",
+      "requests": 10,
+      "concurrency": 1,
+      "output": {
+        "dimensions": [
+          {
+            "rows": 10000,
+            "columns": 10
+          }
+        ],
+        "sha256": "2eed7d52a7720e312deab1a6375c1912cfadd86c0404b0af0b0317b439abc807"
+      },
+      "forcedGc": false,
+      "medians": {
+        "wallMs": 619.3871690000001,
+        "mainThreadCpuMs": 244.025,
+        "heartbeatMaxGapMs": 87.465236
+      },
+      "samples": [
+        {
+          "wallMs": 698.1040380000001,
+          "mainThreadCpuMs": 321.088,
+          "heartbeatMaxGapMs": 127.49821599999996
+        },
+        {
+          "wallMs": 629.462,
+          "mainThreadCpuMs": 218.093,
+          "heartbeatMaxGapMs": 87.465236
+        },
+        {
+          "wallMs": 586.4606349999999,
+          "mainThreadCpuMs": 214.535,
+          "heartbeatMaxGapMs": 85.19091200000003
+        },
+        {
+          "wallMs": 619.3871690000001,
+          "mainThreadCpuMs": 244.025,
+          "heartbeatMaxGapMs": 88.0082080000002
+        },
+        {
+          "wallMs": 612.5099639999999,
+          "mainThreadCpuMs": 245.488,
+          "heartbeatMaxGapMs": 86.09459599999991
+        }
+      ]
+    },
+    {
+      "runtime": "Bun 1.4.1",
+      "host": {
+        "platform": "linux",
+        "arch": "x64",
+        "cpu": "12th Gen Intel(R) Core(TM) i5-12400",
+        "logicalCpus": 12
+      },
+      "engine": "calamine",
+      "input": "calamine-strings-100k.xlsx",
+      "inputBytes": 1677646,
+      "inputSha256": "f3d128d4eaa865701f595b5d8481f00d7308539134cb576a0fcbe470fb1010b8",
+      "inputMode": "buffer",
+      "requests": 10,
+      "concurrency": "runtime-default",
+      "output": {
+        "dimensions": [
+          {
+            "rows": 10000,
+            "columns": 10
+          }
+        ],
+        "sha256": "2eed7d52a7720e312deab1a6375c1912cfadd86c0404b0af0b0317b439abc807"
+      },
+      "forcedGc": false,
+      "medians": {
+        "wallMs": 274.326413,
+        "mainThreadCpuMs": 217.902,
+        "heartbeatMaxGapMs": 74.58881099999985
+      },
+      "samples": [
+        {
+          "wallMs": 264.451455,
+          "mainThreadCpuMs": 213.134,
+          "heartbeatMaxGapMs": 85.17043899999999
+        },
+        {
+          "wallMs": 304.06563800000004,
+          "mainThreadCpuMs": 228.473,
+          "heartbeatMaxGapMs": 66.76028899999994
+        },
+        {
+          "wallMs": 238.86070500000005,
+          "mainThreadCpuMs": 157.928,
+          "heartbeatMaxGapMs": 49.74929399999996
+        },
+        {
+          "wallMs": 274.326413,
+          "mainThreadCpuMs": 217.902,
+          "heartbeatMaxGapMs": 74.58881099999985
+        },
+        {
+          "wallMs": 282.3486889999999,
+          "mainThreadCpuMs": 221.291,
+          "heartbeatMaxGapMs": 84.57937100000004
+        }
+      ]
+    },
+    {
+      "runtime": "Bun 1.4.1",
+      "host": {
+        "platform": "linux",
+        "arch": "x64",
+        "cpu": "12th Gen Intel(R) Core(TM) i5-12400",
+        "logicalCpus": 12
+      },
+      "engine": "sheetjs",
+      "sheetjsVersion": "0.20.3",
+      "input": "calamine-strings-100k.xlsx",
+      "inputBytes": 1677646,
+      "inputSha256": "f3d128d4eaa865701f595b5d8481f00d7308539134cb576a0fcbe470fb1010b8",
+      "inputMode": "buffer",
+      "requests": 10,
+      "concurrency": "runtime-default",
+      "output": {
+        "dimensions": [
+          {
+            "rows": 10000,
+            "columns": 10
+          }
+        ],
+        "sha256": "2eed7d52a7720e312deab1a6375c1912cfadd86c0404b0af0b0317b439abc807"
+      },
+      "forcedGc": false,
+      "medians": {
+        "wallMs": 2531.7927120000004,
+        "mainThreadCpuMs": 2523.166,
+        "heartbeatMaxGapMs": 2543.5337099999997
+      },
+      "samples": [
+        {
+          "wallMs": 2483.280891,
+          "mainThreadCpuMs": 2471.834,
+          "heartbeatMaxGapMs": 2483.4153260000003
+        },
+        {
+          "wallMs": 2531.7927120000004,
+          "mainThreadCpuMs": 2523.166,
+          "heartbeatMaxGapMs": 2543.5337099999997
+        },
+        {
+          "wallMs": 2622.4074040000005,
+          "mainThreadCpuMs": 2614.143,
+          "heartbeatMaxGapMs": 2634.0577359999997
+        },
+        {
+          "wallMs": 2552.2743260000007,
+          "mainThreadCpuMs": 2544.701,
+          "heartbeatMaxGapMs": 2564.1223609999997
+        },
+        {
+          "wallMs": 2512.5682159999997,
+          "mainThreadCpuMs": 2504.263,
+          "heartbeatMaxGapMs": 2522.402674000001
+        }
+      ]
     }
-  ]
+  ],
+  "concurrentMethod": {
+    "requests": 10,
+    "samples": 5,
+    "warmupBatches": 1,
+    "inputs": "Each request reads the same preloaded synthetic Buffer independently. All complete results are retained until Promise.all settles.",
+    "executors": "calamine concurrency 1 versus runtime default; SheetJS uses direct calls on the JS thread, so its ten-request batch executes sequentially. No SheetJS Worker pool is measured.",
+    "environment": {
+      "TOKIO_WORKER_THREADS": "12"
+    },
+    "order": "Fresh process per case; cases run sequentially, calamine limit 1, calamine runtime default, then SheetJS, for each input/runtime."
+  }
 }

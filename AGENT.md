@@ -113,6 +113,10 @@ incremental output uses `RowBatch`. Keep one canonical name per concept.
 - Keep documentation focused on current behavior. Remove superseded design reviews,
   experiment patches, and machine-specific build logs; Git retains their history.
   Keep one reproducible performance report supporting README comparisons.
+- Order the README as usage, performance, then development. Performance comparisons
+  include elapsed time, main-thread CPU, and concurrent batches in readable tables.
+  State the execution model and distinguish direct SheetJS calls from a Worker pool;
+  do not present accumulated CPU time as one continuous event-loop stall.
 - npm artifacts contain runtime files, declarations, source-map sources, licenses,
   and the small public documentation set. Exclude agent instructions, tests, scripts,
   raw benchmark results, and development-only files from the package allowlist.

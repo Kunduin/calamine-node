@@ -13,76 +13,14 @@ native scheduler has been tested locally on Linux x64 GNU with Node 22 and Bun 1
 See [platforms and CI](docs/platforms.md) for the configured build matrix and
 remaining runtime checks before publication.
 
-## Capabilities
+[Usage](#usage) · [Performance](#performance) · [Development](#development)
 
-| Capability                         | Behavior                                                                      |
-| ---------------------------------- | ----------------------------------------------------------------------------- |
-| XLSX, XLS, XLSM                    | Read cells, sheet metadata, cached values and formula text                    |
-| XLSB, ODS                          | Experimental, explicit opt-in; see [compatibility](docs/compatibility.md)     |
-| Local paths and file URLs          | Native file reading; no JavaScript read of the entire file                    |
-| Buffer and Uint8Array              | Snapshot the specified byte view at invocation                                |
-| Node/Web streams and AsyncIterable | Backpressured download to a private temporary file                            |
-| Batch output                       | Pull-based async iteration; at most one decoded sheet per active operation    |
-| Defined names                      | Name and formula strings, as reported by Calamine                             |
-| VBA                                | Extract module source and reference metadata on request; never execute macros |
-| Dates and cell errors              | Preserve explicit tagged values instead of guessing JS Date timezones         |
-| Cancellation                       | AbortSignal for queued work, download and result delivery                     |
-| Disposal                           | Idempotent close and Symbol.asyncDispose                                      |
+## Usage
 
-This is a reader. It does not write spreadsheets, recalculate formulas, render
-styles, expose images/merged-cell geometry/tables, or provide a browser/WASM build.
-It does not yet expose every format-specific Calamine API.
+Use `read` for complete data with automatic cleanup. Use an open handle when you
+need repeated sheet reads or batch iteration.
 
-## Performance compared with SheetJS
-
-For server-side, read-only ingestion, the main benefits are faster complete reads
-on the measured workloads and native background parsing through a Promise API.
-You do not need to build a JS Worker pool to move the parser off the calling thread.
-Local paths are read directly in Rust, and batch iteration lets consumers control
-JS result delivery without collecting every returned row.
-
-Measured on Linux x64, Intel Core i5-12400, using preloaded XLSX Buffers. Each value
-is the median of five complete reads after warmup. SheetJS CE **0.20.3** uses its
-official Node package, **dense mode**, and `sheet_to_json` to produce row matrices.
-Both engines' output dimensions and row-data hashes match for these inputs.
-
-| Runtime      | Workload                  | calamine-node |  SheetJS | Speedup |
-| ------------ | ------------------------- | ------------: | -------: | ------: |
-| Node 22.23.2 | 1,000,000 numeric cells   |        327 ms | 1,454 ms |    4.4× |
-| Node 22.23.2 | 100,000 long string cells |         74 ms |   485 ms |    6.5× |
-| Bun 1.4.1    | 1,000,000 numeric cells   |        275 ms | 1,259 ms |    4.6× |
-| Bun 1.4.1    | 100,000 long string cells |         75 ms |   241 ms |    3.2× |
-
-Main-thread work also differs: the Node numeric case used about **81 ms** of
-main-thread CPU here versus **1,415 ms** for direct SheetJS parsing. The median
-per-run largest timer gap was **2.3 ms versus 1,454 ms** in that case. These are
-observations, not latency guarantees: Buffer snapshots, JS value construction,
-and garbage collection still run on the JS thread.
-
-This compares direct SheetJS calls, not a SheetJS Worker implementation;
-[SheetJS also documents worker-based processing](https://docs.sheetjs.com/docs/demos/bigdata/worker/).
-The speedups apply to these synthetic XLSX inputs, not every format or workload.
-This package is a native Node/Bun reader, with no spreadsheet-writing or browser
-API. Neither input spooling nor batch output makes native Excel decoding use
-constant memory. See [methodology and reproduction](docs/performance.md).
-
-## Build and run locally
-
-Install a stable Rust toolchain, Node >=22.13, the pnpm version pinned in
-`package.json`, and Bun for compatibility tests. TypeScript 7 builds the JS facade.
-
-```sh
-pnpm install --frozen-lockfile
-pnpm build
-pnpm check
-pnpm pack:check
-```
-
-The official napi-rs CLI builds the addon and generates its loader and declarations.
-Consumers of a future release with a matching prebuilt binary will not need Rust.
-See [development and packaging](docs/development.md) for platform and release details.
-
-## Read complete JavaScript data
+### Read complete JavaScript data
 
 A **workbook** is an Excel file. A **sheet** is one tab inside that workbook.
 Use `read` for complete data, selecting one, several, or all worksheets:
@@ -178,7 +116,27 @@ Use `createReader(configuration).read(...)` to share custom concurrency limits,
 a temporary directory, or experimental format opt-ins.
 Per-call input and cell limits override that reader's defaults.
 
-## TypeScript API
+### Capabilities
+
+| Capability                         | Behavior                                                                      |
+| ---------------------------------- | ----------------------------------------------------------------------------- |
+| XLSX, XLS, XLSM                    | Read cells, sheet metadata, cached values and formula text                    |
+| XLSB, ODS                          | Experimental, explicit opt-in; see [compatibility](docs/compatibility.md)     |
+| Local paths and file URLs          | Native file reading; no JavaScript read of the entire file                    |
+| Buffer and Uint8Array              | Snapshot the specified byte view at invocation                                |
+| Node/Web streams and AsyncIterable | Backpressured download to a private temporary file                            |
+| Batch output                       | Pull-based async iteration; at most one decoded sheet per active operation    |
+| Defined names                      | Name and formula strings, as reported by Calamine                             |
+| VBA                                | Extract module source and reference metadata on request; never execute macros |
+| Dates and cell errors              | Preserve explicit tagged values instead of guessing JS Date timezones         |
+| Cancellation                       | AbortSignal for queued work, download and result delivery                     |
+| Disposal                           | Idempotent close and Symbol.asyncDispose                                      |
+
+This is a reader. It does not write spreadsheets, recalculate formulas, render
+styles, expose images/merged-cell geometry/tables, or provide a browser/WASM build.
+It does not yet expose every format-specific Calamine API.
+
+### TypeScript API
 
 Types follow the operation or data they describe:
 
@@ -196,7 +154,7 @@ closed; its `sheets` contain metadata until you request rows. A workbook is stil
 the spreadsheet file, and a sheet is one tab. Selecting one sheet changes the
 contents of `ReadResult.sheets`, not the return type.
 
-## Keep a workbook open for inspection or repeated reads
+### Keep a workbook open for inspection or repeated reads
 
 ```ts
 import { openFile } from 'calamine-node';
@@ -225,7 +183,7 @@ TypeScript build), `await using workbook = await openFile(path)` closes automati
 A discarded Promise or garbage collection is not a substitute for `close()` on a
 handle. Prefer `read` when you do not need to manage a handle.
 
-## Buffers and input streams
+### Buffers and input streams
 
 ```ts
 import { readFile } from 'node:fs/promises';
@@ -276,7 +234,7 @@ Authentication, retries and network timeouts remain the caller's responsibility.
 These inputs also work for S3, HTTP and other byte sources. No native HTTP client,
 OpenDAL operator, or cloud credentials are bundled into this package.
 
-## Batches and all worksheets
+### Batches and all worksheets
 
 ```ts
 import { openFile } from 'calamine-node';
@@ -321,7 +279,7 @@ One workbook allows one active read operation/iterator; another gets `ERR_BUSY`.
 Use separate workbooks for concurrent reads. Closing a workbook invalidates its
 iterators and waits for native cleanup, even when an operation is in flight.
 
-## Cell values, dates and formulas
+### Cell values, dates and formulas
 
 Cells are `string | number | boolean | null | SpecialValue`. Empty strings stay empty
 strings; empty cells become `null`. Numeric floats keep JavaScript's IEEE-754 limits.
@@ -350,7 +308,7 @@ cached results are not recalculated. Formula mode returns formula strings and
 `null` holes. Its used range and origin can differ from the value range; align by
 absolute coordinates. Formula syntax is preserved, including ODS-specific notation.
 
-## VBA
+### VBA
 
 ```ts
 const project = await workbook.readVbaProject({ maxBytes: 16 * 1024 * 1024 });
@@ -365,7 +323,7 @@ contain `name`, `description`, and `path`. Paths describe the authoring machine;
 we neither access them nor label them broken based on the server's filesystem.
 The source size limit is checked after Calamine extracts it, before returning to JS.
 
-## Concurrency, limits and cancellation
+### Concurrency, limits and cancellation
 
 ```ts
 import { createReader } from 'calamine-node';
@@ -439,7 +397,7 @@ rows and the approximate cell target; neither Tokio nor Rust object preparation
 removes that cost. See [implementation details](docs/development.md) and the
 [napi-rs async documentation](https://napi.rs/docs/concepts/async-fn).
 
-## Errors
+### Errors
 
 Native/library failures use `SpreadsheetError` with a stable `code`. Invalid arguments
 raise `TypeError`; upstream input-stream errors and AbortSignal reasons pass through.
@@ -458,10 +416,103 @@ raise `TypeError`; upstream input-stream errors and AbortSignal reasons pass thr
 Await native calls and close handles before a Worker exits. Abrupt termination during
 native work is not a supported cancellation mechanism, particularly on Bun.
 
+## Performance
+
+For server-side, read-only ingestion, the main benefits are faster complete reads
+on the measured workloads and native background parsing through a Promise API.
+You do not need to build a JS Worker pool to move the parser off the calling thread.
+Local paths are read directly in Rust, and batch iteration lets consumers control
+JS result delivery without collecting every returned row.
+
+Measured on Linux x64, Intel Core i5-12400, using preloaded XLSX Buffers. Each value
+is the median of five measured reads or batches after warmup. SheetJS CE **0.20.3** uses its
+official Node package, **dense mode**, and `sheet_to_json` to produce row matrices.
+Both engines' output dimensions and row-data hashes match for these inputs.
+
+### Single-read elapsed time
+
+| Runtime      | Workload                  | calamine-node |  SheetJS | Speedup |
+| ------------ | ------------------------- | ------------: | -------: | ------: |
+| Node 22.23.2 | 1,000,000 numeric cells   |        327 ms | 1,454 ms |    4.4× |
+| Node 22.23.2 | 100,000 long string cells |         74 ms |   485 ms |    6.5× |
+| Bun 1.4.1    | 1,000,000 numeric cells   |        275 ms | 1,259 ms |    4.6× |
+| Bun 1.4.1    | 100,000 long string cells |         75 ms |   241 ms |    3.2× |
+
+### Main-thread CPU and responsiveness
+
+Main-thread CPU is accumulated work during a complete read. The timer gap measures
+responsiveness: it is the median of each run's largest gap between 1 ms callbacks.
+All values below are milliseconds; the two metrics describe different costs.
+
+| Runtime      | Workload     | calamine CPU | SheetJS CPU | calamine timer gap | SheetJS timer gap |
+| ------------ | ------------ | -----------: | ----------: | -----------------: | ----------------: |
+| Node 22.23.2 | 1M numbers   |         80.6 |      1415.3 |                2.3 |            1453.7 |
+| Node 22.23.2 | 100K strings |         22.8 |       481.2 |                2.7 |             485.9 |
+| Bun 1.4.1    | 1M numbers   |         28.7 |      1252.4 |                1.8 |            1269.2 |
+| Bun 1.4.1    | 100K strings |         21.1 |       240.0 |                2.1 |             241.3 |
+
+Native parsing leaves the JS thread available between batches. Buffer snapshots,
+JS value construction, and garbage collection still use the JS thread. These
+observed timer gaps are not worst-case latency guarantees.
+
+### Concurrent reads: ten-request batches
+
+Ten reads are requested in one `Promise.all` batch, each independently parsing the
+same preloaded input and returning complete rows. calamine-node is measured with
+one native execution slot and with its default of twelve on this host. SheetJS
+uses direct calls on the JS thread, so its ten reads execute sequentially even
+inside `Promise.all`. A SheetJS Worker pool is not included in this comparison.
+
+The table shows **total time for all ten results**. Scaling compares calamine's
+limit of one with its default of twelve; it is not a speedup relative to SheetJS.
+
+| Runtime | Workload per request | calamine, limit 1 | calamine, default 12 | SheetJS, direct | calamine scaling |
+| ------- | -------------------- | ----------------: | -------------------: | --------------: | ---------------: |
+| Node    | 1M numbers           |           3.167 s |              1.091 s |        14.488 s |            2.90× |
+| Node    | 100K strings         |           0.634 s |              0.341 s |         4.918 s |            1.86× |
+| Bun     | 1M numbers           |           2.596 s |              0.645 s |        14.899 s |            4.03× |
+| Bun     | 100K strings         |           0.619 s |              0.274 s |         2.532 s |            2.26× |
+
+Main-thread CPU and timer gaps for the same batches are below, in milliseconds.
+calamine-node uses the default limit of twelve in this table.
+
+| Runtime | Workload per request | calamine CPU | SheetJS CPU | calamine timer gap | SheetJS timer gap |
+| ------- | -------------------- | -----------: | ----------: | -----------------: | ----------------: |
+| Node    | 1M numbers           |        815.2 |     14275.0 |               11.2 |           14489.1 |
+| Node    | 100K strings         |        250.3 |      4876.4 |               15.5 |            4918.8 |
+| Bun     | 1M numbers           |        257.0 |     14853.5 |               14.2 |           14909.5 |
+| Bun     | 100K strings         |        217.9 |      2523.2 |               74.6 |            2543.5 |
+
+More parallel parsing shortens elapsed time while JS result construction still
+uses the main thread. The Node numeric batch's 815 ms of main-thread CPU is
+accumulated across delivery, not one uninterrupted pause. Bun's string batch
+finishes faster than Node's here but has a larger observed timer gap; elapsed time
+alone does not describe responsiveness. All ten complete results are retained
+until the batch finishes, so this is not a bounded-memory streaming measurement.
+
+This compares direct SheetJS calls, not a SheetJS Worker implementation;
+[SheetJS also documents worker-based processing](https://docs.sheetjs.com/docs/demos/bigdata/worker/).
+The speedups apply to these synthetic XLSX inputs, not every format or workload.
+This package is a native Node/Bun reader, with no spreadsheet-writing or browser
+API. Neither input spooling nor batch output makes native Excel decoding use
+constant memory. See [methodology and reproduction](docs/performance.md).
+
 ## Development
 
+Install a stable Rust toolchain, Node >=22.13, the pnpm version pinned in
+`package.json`, and Bun for compatibility tests. TypeScript 7 builds the JS facade.
+
+```sh
+pnpm install --frozen-lockfile
+pnpm build
+pnpm check
+pnpm pack:check
+```
+
+The official napi-rs CLI builds the addon and generates its loader and declarations.
+Consumers of a future release with a matching prebuilt binary will not need Rust.
 See [development](docs/development.md) for tests, architecture, maintenance scripts,
-and packaging, and [performance](docs/performance.md) for reproducible comparisons.
+platform builds, and packaging, and [performance](docs/performance.md) for reproducible comparisons.
 All fixtures are synthetic or attributed upstream samples. Benchmarks run locally.
 
 MIT licensed; see [LICENSE](LICENSE). Third-party dependency license texts are
