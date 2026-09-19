@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.0](https://github.com/Kunduin/calamine-node/compare/v0.1.0...v0.2.0) (2026-09-19)
+
+
+### Features
+
+* expose merged cell ranges ([f00e1d6](https://github.com/Kunduin/calamine-node/commit/f00e1d626e4307c6ce93257c848ace91393b3dce))
+
+
+### Bug Fixes
+
+* read merged cell ranges by default ([55528ef](https://github.com/Kunduin/calamine-node/commit/55528ef92ec1ffcb6196008ad45f675f824748af))
+
 ## 0.1.0 (2026-09-19)
 
 ### Features

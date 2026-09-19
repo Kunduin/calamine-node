@@ -1,6 +1,6 @@
 {
   "name": "calamine-node",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Asynchronous spreadsheet reading for Node.js and Bun, powered by Calamine and Node-API.",
   "keywords": [
     "async",
