@@ -12,7 +12,15 @@
     "xls",
     "xlsx"
   ],
+  "homepage": "https://github.com/Kunduin/calamine-node#readme",
+  "bugs": {
+    "url": "https://github.com/Kunduin/calamine-node/issues"
+  },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kunduin/calamine-node.git"
+  },
   "files": [
     "dist",
     "native/*.cjs",
