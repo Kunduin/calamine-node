@@ -86,10 +86,12 @@ jobs:
         with:
           key: ${{ matrix.target }}
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: mlugg/setup-zig@v2
+      - name: Install Zig
         if: contains(matrix.target, 'musl')
-        with:
-          version: 0.15.2
+        run: |
+          python3 -m pip install --disable-pip-version-check --target "$RUNNER_TEMP/zig" ziglang==0.15.2
+          echo "$RUNNER_TEMP/zig/ziglang" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/zig/ziglang/zig" version
       - uses: taiki-e/install-action@v2
         if: contains(matrix.target, 'musl')
         with:

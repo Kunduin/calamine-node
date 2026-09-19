@@ -83,7 +83,13 @@ try {
       include: ['types.ts'],
     }),
   );
-  await execute('pnpm', ['exec', 'tsc', '--project', join(temporary, 'tsconfig.json')]);
+  // Release preparation adds platform dependencies without changing the development lockfile.
+  // Invoke the installed compiler directly so pnpm does not try to reinstall dependencies.
+  await execute(process.execPath, [
+    resolve('node_modules/typescript/bin/tsc'),
+    '--project',
+    join(temporary, 'tsconfig.json'),
+  ]);
   console.log(
     'Packed package passed offline install, Node/Bun runtime and TypeScript 7 consumer checks.',
   );
